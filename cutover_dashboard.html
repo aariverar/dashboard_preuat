@@ -1,0 +1,1622 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tablero de Seguimiento CutOver - Santander Consumer Bank</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico"/>  <!-- ← favicon -->
+  <style>
+    :root {
+      --san-red:        #EC0000;
+      --san-red-dark:   #A50000;
+      --san-white:      #FFFFFF;
+      --san-gray-100:   #F5F5F5;
+      --san-gray-200:   #EEEEEE;
+      --san-gray-600:   #757575;
+      --san-gray-900:   #212121;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 14px; scroll-behavior: smooth; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--san-gray-100); color: var(--san-gray-900); min-height: 100vh; display: flex; flex-direction: column; }
+    main { flex: 1; padding: 20px 24px 40px; }
+    header { background: var(--san-red); color: var(--san-white); padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
+    .header-logo { width: 44px; height: 44px; background: var(--san-white); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.1rem; color: var(--san-red); flex-shrink: 0; }
+    .header-info { flex: 1; }
+    .header-title { font-size: 1.2rem; font-weight: 700; letter-spacing: .3px; }
+    .header-sub   { font-size: .75rem; opacity: .85; }
+    .header-meta  { font-size: .75rem; opacity: .8; text-align: right; line-height: 1.6; }
+    .section-title { font-size: 1rem; font-weight: 700; color: var(--san-red-dark); margin-bottom: 10px; margin-top: 24px; border-left: 4px solid var(--san-red); padding-left: 8px; }
+    /* ── ELIMINAR ESTAS REGLAS ── */
+    /* .filter-bar { ... } */
+    /* .filter-group { ... } */
+    /* .filter-group-title { ... } */
+    /* .filter-group-fields { ... } */
+    /* .filter-actions { ... } */
+
+    .btn { padding: 6px 14px; border: none; border-radius: 5px; font-size: .82rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+    .btn-red  { background: var(--san-red); color: #FFF; }
+    .btn-red:hover { background: var(--san-red-dark); }
+    .btn-gray { background: #EEE; color: #333; }
+    .btn-gray:hover { background: #DDD; }
+    .hm-pagination { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 14px; }
+    .hm-pagination button { background: #fff; border: 1.5px solid var(--san-red); color: var(--san-red); font-size: .78rem; font-weight: 700; border-radius: 6px; padding: 5px 16px; cursor: pointer; transition: background .15s, color .15s; }
+    .hm-pagination button:hover:not(:disabled) { background: var(--san-red); color: #fff; }
+    .hm-pagination button:disabled { border-color: #ccc; color: #aaa; cursor: default; }
+    .hm-pagination span { font-size: .8rem; font-weight: 600; color: var(--san-gray-600); }
+    .qa-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 18px; }
+    @media(max-width:900px){ .qa-grid { grid-template-columns: repeat(2,1fr); } }
+    .qa-card { background: var(--san-white); border-radius: 8px; padding: 12px 14px; box-shadow: 0 2px 6px rgba(0,0,0,.07); border-left: 4px solid var(--san-gray-200); }
+    .qa-card-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--san-gray-600); margin-bottom: 4px; }
+    .qa-card-value { font-size: 1.7rem; font-weight: 800; line-height: 1; }
+    .qa-card-sub { font-size: .68rem; color: var(--san-gray-600); margin-top: 3px; }
+    .qa-card.qa-green  { border-left-color: #43A047; } .qa-card.qa-green  .qa-card-value { color: #43A047; }
+    .qa-card.qa-red    { border-left-color: #EC0000; } .qa-card.qa-red    .qa-card-value { color: #EC0000; }
+    .qa-card.qa-orange { border-left-color: #FB8C00; } .qa-card.qa-orange .qa-card-value { color: #FB8C00; }
+    .qa-card.qa-blue   { border-left-color: #1E88E5; } .qa-card.qa-blue   .qa-card-value { color: #1E88E5; }
+    .qa-card.qa-purple { border-left-color: #8E24AA; } .qa-card.qa-purple .qa-card-value { color: #8E24AA; }
+    .qa-card.qa-gray   { border-left-color: #9E9E9E; } .qa-card.qa-gray   .qa-card-value { color: #9E9E9E; }
+    .qa-charts-row { display: grid; gap: 16px; margin-bottom: 20px; }
+    .qa-panel { background: var(--san-white); border-radius: 8px; padding: 14px 16px; box-shadow: 0 2px 6px rgba(0,0,0,.07); }
+    .qa-panel h3 { font-size: .78rem; font-weight: 700; color: var(--san-gray-600); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 10px; }
+    .qa-owner-table { width: 100%; border-collapse: collapse; font-size: .75rem; }
+    .qa-owner-table th { background: var(--san-gray-200); padding: 6px 10px; text-align: left; font-weight: 700; font-size: .7rem; }
+    .qa-owner-table td { padding: 6px 10px; border-bottom: 1px solid var(--san-gray-200); }
+    .qa-owner-table tr:hover td { background: #fafafa; }
+    .qa-pill { display:inline-block; padding: 2px 8px; border-radius: 10px; font-size:.66rem; font-weight:700; }
+    .chart-bars { display: flex; flex-direction: column; gap: 6px; }
+    .bar-row { display: flex; align-items: center; gap: 6px; font-size: .75rem; }
+    .bar-label { width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    .bar-track { flex: 1; background: var(--san-gray-200); border-radius: 3px; height: 14px; }
+    .bar-fill  { height: 100%; border-radius: 3px; transition: width .4s; }
+    .bar-count { width: 26px; text-align: right, !important; font-weight: 700; flex-shrink: 0; }
+    footer { background: var(--san-gray-900); color: #AAA; text-align: center; padding: 12px 16px; font-size: .72rem; margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 10px; line-height: 1.8; }
+    footer span { white-space: nowrap; }
+    #fileInput { display: none; }
+    #loadingOverlay { display: none; position: fixed; inset: 0; z-index: 10000; background: rgba(18,18,18,.72); backdrop-filter: blur(4px); flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+    #loadingOverlay.active { display: flex; }
+    .loader-box { background: #fff; border-radius: 16px; padding: 36px 48px; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.35); min-width: 320px; }
+    .loader-icon { font-size: 2.4rem; margin-bottom: 8px; animation: spin 1.2s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-title { font-size: 1rem; font-weight: 700; color: #212121; margin-bottom: 4px; }
+    .loader-sub   { font-size: .78rem; color: #757575; margin-bottom: 18px; }
+    .loader-track { width: 100%; height: 8px; background: #E0E0E0; border-radius: 99px; overflow: hidden; }
+    .loader-bar   { height: 100%; width: 0%; background: linear-gradient(90deg,#EC0000,#1E88E5); border-radius: 99px; transition: width .25s ease; }
+    #importToast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: #212121; color: #FFF; padding: 10px 22px; border-radius: 8px; font-size: .85rem; font-weight: 600; box-shadow: 0 4px 18px rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 9999; }
+    #importToast.show { opacity: 1; }
+    #importToast.success { border-left: 5px solid #2E7D32; }
+    #importToast.error   { border-left: 5px solid #C62828; }
+    #splashEmpty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 64px 24px; text-align: center; background: var(--san-white); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.07); margin: 16px 0 24px; }
+    #splashEmpty .splash-icon { width: 72px; height: 72px; border-radius: 50%; background: #FFF0F0; display: flex; align-items: center; justify-content: center; }
+    #splashEmpty h2 { font-size: 1.15rem; font-weight: 700; color: var(--san-gray-900); }
+    #splashEmpty p  { font-size: .88rem; color: var(--san-gray-600); max-width: 460px; line-height: 1.6; }
+    #splashEmpty .btn-splash { margin-top: 4px; padding: 10px 24px; background: var(--san-red); color: #FFF; border: none; border-radius: 7px; font-size: .88rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background .15s; }
+    #splashEmpty .btn-splash:hover { background: var(--san-red-dark); }
+    .hidden { display: none !important; }
+
+    /* ── Macroprocesos ── */
+    .macro-badge { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; font-size: .78rem; }
+    .macro-dot   { width: 16px; height: 16px; flex-shrink: 0; object-fit: contain; }
+    .hier-n0-badge { display:inline-flex; align-items:center; gap:6px; }
+    .hier-n0-dot   { width:14px; height:14px; flex-shrink:0; object-fit:contain; }
+    .macro-progress { display: flex; align-items: center; gap: 6px; }
+    .macro-progress-track { flex: 1; min-width: 60px; height: 8px; background: #EEE; border-radius: 99px; overflow: hidden; }
+    .macro-progress-fill  { height: 100%; border-radius: 99px; transition: width .4s; }
+    .macro-pct { font-size: .72rem; font-weight: 700; min-width: 36px; text-align: right; }
+    #macroTable tfoot td { background: var(--san-gray-200); font-weight: 700; font-size: .75rem; padding: 7px 10px; border-top: 2px solid #CCC; }
+    .macro-row-empty td { color: #BBB; font-style: italic; }
+
+    /* ── Funcionalidades ── */
+    .func-row { display: grid; grid-template-columns: clamp(120px, 25%, 260px) 1fr 36px; align-items: start; gap: 10px; margin-bottom: 8px; }
+    .func-name { font-size: clamp(.65rem, 1.1vw, .78rem); line-height: 1.35; color: #333; word-break: break-word; padding-top: 2px; cursor: default; position: relative; }
+    .func-name::after { content: attr(data-tooltip); display: none; position: absolute; left: 0; top: 100%; z-index: 999; background: #212121; color: #fff; font-size: .72rem; line-height: 1.5; padding: 6px 10px; border-radius: 6px; width: max-content; max-width: min(420px, 80vw); white-space: normal; word-break: break-word; box-shadow: 0 4px 14px rgba(0,0,0,.3); pointer-events: none; }
+    .func-name:hover::after { display: block; }
+    .func-squares { display: flex; flex-wrap: wrap; gap: clamp(2px, .3vw, 4px); align-items: flex-start; }
+    .func-square  { width: clamp(10px, 1.2vw, 16px); height: clamp(10px, 1.2vw, 16px); border-radius: 2px; flex-shrink: 0; cursor: default; }
+    .func-total   { font-size: clamp(.65rem, 1vw, .75rem); font-weight: 700; color: #555; text-align: right; padding-top: 2px; }
+    @media(max-width:1100px){ .func-row { grid-template-columns: clamp(100px, 22%, 200px) 1fr 30px; } }
+    @media(max-width:700px)  { .func-row { grid-template-columns: 1fr; gap: 4px; } .func-name::after { bottom: 100%; top: auto; } }
+    .func-level-btn { padding: 3px 10px; font-size: .7rem; font-weight: 700; border: 1.5px solid var(--san-red); border-radius: 4px; background: #fff; color: var(--san-red); cursor: pointer; transition: background .15s, color .15s; }
+    .func-level-btn:hover  { background: #fff0f0; }
+    .func-level-btn.active { background: var(--san-red); color: #fff; }
+
+    /* ── Filtro botones Aplicación ── */
+    .app-filter-btn {
+      padding: 3px 10px; font-size: .68rem; font-weight: 700;
+      border: 1.5px solid #ccc; border-radius: 99px;
+      background: #fff; color: #555; cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+      white-space: nowrap;
+    }
+    .app-filter-btn:hover { border-color: #1E88E5; color: #1E88E5; background: #e8f0fe; }
+    .app-filter-btn.active {
+      background: #1E88E5; color: #fff;
+      border-color: #1E88E5;
+    }
+    .app-filter-btn.all-btn.active {
+      background: var(--san-red); border-color: var(--san-red);
+    }
+    /* ── FIN REGLAS AÑADIDAS ── */
+
+    /* ── Jerarquía N0→N1→N2 colapsable ── */
+    .hier-n0-row td { background: #f0f4ff; font-weight: 700; font-size: .78rem; border-top: 2px solid #c5cfe8; cursor:pointer; user-select:none; }
+    .hier-n1-row td { background: #fafafa; font-weight: 600; font-size: .75rem; cursor:pointer; user-select:none; }
+    .hier-n1-row td:nth-child(2) { padding-left: 20px; }
+    .hier-n2-row td { background: #fff; font-size: .73rem; }
+    .hier-n2-row td:nth-child(3) { padding-left: 10px; }
+    .hier-n0-badge { display:inline-flex; align-items:center; gap:6px; }
+    .hier-n0-dot   { width:14px; height:14px; flex-shrink:0; object-fit:contain; }
+    .hier-toggle   { display:inline-flex; align-items:center; justify-content:center;
+                     width:18px; height:18px; border-radius:3px; background:#e0e7ff;
+                     color:#3949AB; font-size:.75rem; font-weight:900; flex-shrink:0;
+                     transition: transform .2s; margin-right:4px; }
+    .hier-toggle.open  { transform: rotate(0deg); }
+    .hier-toggle.closed{ transform: rotate(-90deg); }
+    .hier-collapsed { display: none !important; }
+
+    /* ── Burndown diario ── */
+    #burnChart { display:block; width:100% !important; }
+    .burn-row-today td { background:#fffde7 !important; font-weight:700; }
+
+  </style>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="header-logo">SCB</div>
+  <div class="header-info">
+    <div class="header-title">Tablero de Seguimiento - Santander Consumer Bank</div>
+    <div class="header-sub">Dashboard Resumen del Avance de Pruebas Pre UAT</div>
+  </div>
+  <div class="header-meta" id="headerMeta">Sin datos cargados</div>
+  <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="importExcel(this)"/>
+</header>
+
+<div id="loadingOverlay">
+  <div class="loader-box">
+    <div class="loader-icon">⚙️</div>
+    <div class="loader-title">Procesando archivo Excel…</div>
+    <div class="loader-sub" id="loaderSub">Leyendo datos</div>
+    <div class="loader-track"><div class="loader-bar" id="loaderBar"></div></div>
+  </div>
+</div>
+<div id="importToast"></div>
+
+<main>
+  <div id="splashEmpty">
+    <div class="splash-icon">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+    </div>
+    <h2>Sin datos cargados</h2>
+    <p>Sube un archivo Excel con las hojas:<br>
+      <strong>"Matriz CP"</strong> — casos de prueba y funcionalidades<br>
+      <strong>"Matriz Ejecución"</strong> — resultados de ejecución<br>
+      <strong>"Matriz de Incidencias"</strong> — defectos registrados
+    </p>
+    <button class="btn-splash" onclick="document.getElementById('fileInput').click()">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      Seleccionar archivo Excel
+    </button>
+  </div>
+
+  <div id="mainContent" class="hidden">
+    <!-- ══ SECCIÓN 1: COBERTURA POR MACROPROCESO ══ -->
+    <div class="section-title">Macroproceso por Aplicación</div>
+    <div class="qa-panel" style="overflow-x:auto;margin-bottom:20px;">
+      <div style="margin-bottom:10px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-size:.85rem;font-weight:700;color:#333;">Distribución de Procesos y Funcionalidades</div>
+          <div style="font-size:.72rem;color:var(--san-gray-600);margin-top:2px;">
+            Filtra por aplicación para saber que Macroprocesos contiene
+          </div>
+        </div>
+        <!-- FILTRO DINÁMICO POR APLICACIÓN -->
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+          <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--san-gray-600);">
+            Filtrar por Aplicación:
+          </div>
+          <div id="appFilterBtns" style="display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end;max-width:600px;">
+            <!-- botones generados dinámicamente -->
+          </div>
+        </div>
+      </div>
+      <table class="qa-owner-table" id="macroTable">
+        <thead>
+          <tr>
+            <th style="min-width:40px;">#</th>
+            <th style="min-width:200px;">Macroproceso</th>
+            <th style="text-align:center;min-width:80px;"># Macroprocesos</th>
+            <th style="text-align:center;min-width:80px;"># Procesos</th>
+            <th style="text-align:center;min-width:80px;"># Funcionalidades</th>
+            <th style="text-align:center;min-width:90px;">Casos de Prueba</th>
+            <th style="text-align:center;min-width:120px;">% Avance</th>
+          </tr>
+        </thead>
+        <tbody id="macroTableBody"></tbody>
+        <tfoot id="macroTableFoot"></tfoot>
+      </table>
+    </div>
+
+    <!-- ══ SECCIÓN 1B: JERARQUÍA N0 → N1 → N2 ══ -->
+    <div class="section-title">Desglose Jerárquico por Funcionalidad (N0 → N1 → N2)</div>
+    <div class="qa-panel" style="overflow-x:auto;margin-bottom:20px;">
+      <div style="margin-bottom:10px;">
+        <div style="font-size:.85rem;font-weight:700;color:#333;">Detalle de Funcionalidades por Nivel</div>
+        <div style="font-size:.72rem;color:var(--san-gray-600);margin-top:2px;">
+          Vista jerárquica completa: Macroproceso (N0) → Proceso (N1) → Funcionalidad (N2) con estado de ejecución
+        </div>
+      </div>
+      <table class="qa-owner-table" id="hierTable">
+        <thead>
+          <tr>
+            <th style="min-width:180px;">Macroproceso (N0)</th>
+            <th style="min-width:200px;">Proceso (N1)</th>
+            <th style="min-width:220px;">Funcionalidad (N2)</th>
+            <th style="text-align:center;min-width:90px;">Casos de Prueba</th>
+            <th style="text-align:center;min-width:80px;">Exitosos</th>
+            <th style="text-align:center;min-width:80px;">Fallidos</th>
+            <th style="text-align:center;min-width:90px;">Sin Ejecutar</th>
+            <th style="text-align:center;min-width:120px;">% Avance</th>
+          </tr>
+        </thead>
+        <tbody id="hierTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- ══ SECCIÓN 1C: BURNDOWN DIARIO ══ -->
+    <div class="section-title">Seguimiento Diario de Ejecución — Entradas · Salidas · Stock</div>
+    <div class="qa-panel" style="overflow-x:auto;margin-bottom:20px;">
+      <div style="margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+        <div>
+          <div style="font-size:.85rem;font-weight:700;color:#333;">Línea de Tiempo por Día</div>
+          <div style="font-size:.72rem;color:var(--san-gray-600);margin-top:2px;">
+            Barras verdes ↑ Exitosos del día · Barras rojas ↓ Incidencias del día · Línea azul = Stock pendiente acumulado
+          </div>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+          <div style="display:flex;align-items:center;gap:5px;font-size:.72rem;font-weight:700;">
+            <span style="display:inline-block;width:12px;height:12px;background:#43A047;border-radius:2px;"></span> Exitosos (↑)
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:.72rem;font-weight:700;">
+            <span style="display:inline-block;width:12px;height:12px;background:#EC0000;border-radius:2px;"></span> Incidencias (↓)
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:.72rem;font-weight:700;">
+            <span style="display:inline-block;width:12px;height:4px;background:#1E88E5;border-radius:2px;"></span> Stock Pendiente
+          </div>
+        </div>
+      </div>
+
+      <!-- KPIs rápidos -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;" id="burnKpiRow">
+        <div style="background:#f0faf0;border-left:4px solid #43A047;border-radius:6px;padding:10px 12px;">
+          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#43A047;margin-bottom:3px;">Total Exitosos</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#43A047;" id="burnKpiEx">—</div>
+        </div>
+        <div style="background:#fff5f5;border-left:4px solid #EC0000;border-radius:6px;padding:10px 12px;">
+          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#EC0000;margin-bottom:3px;">Total Incidencias</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#EC0000;" id="burnKpiFa">—</div>
+        </div>
+        <div style="background:#f0f4ff;border-left:4px solid #1E88E5;border-radius:6px;padding:10px 12px;">
+          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#1E88E5;margin-bottom:3px;">Stock Pendiente</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#1E88E5;" id="burnKpiStock">—</div>
+        </div>
+        <div style="background:#fafafa;border-left:4px solid #9E9E9E;border-radius:6px;padding:10px 12px;">
+          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#9E9E9E;margin-bottom:3px;">Días con Ejecución</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#9E9E9E;" id="burnKpiDias">—</div>
+        </div>
+      </div>
+
+      <!-- Gráfica -->
+      <div style="position:relative;width:100%;overflow-x:auto;">
+        <div id="burnChartWrap" style="min-width:600px;position:relative;max-height:260px;">
+          <canvas id="burnChart" style="max-height:260px;"></canvas>
+        </div>
+      </div>
+
+      <!-- Tabla diaria -->
+      <div style="margin-top:18px;overflow-x:auto;">
+        <table class="qa-owner-table" id="burnTable">
+          <thead>
+            <tr>
+              <th style="min-width:100px;">Fecha</th>
+              <th style="text-align:center;min-width:80px;">Entradas</th>
+              <th style="text-align:center;min-width:80px;">Exitosos</th>
+              <th style="text-align:center;min-width:80px;">Incidencias</th>
+              <th style="text-align:center;min-width:80px;">Salidas</th>
+              <th style="text-align:center;min-width:100px;">Stock Acum.</th>
+              <th style="text-align:center;min-width:120px;">% Avance Día</th>
+            </tr>
+          </thead>
+          <tbody id="burnTableBody"></tbody>
+          <tfoot id="burnTableFoot"></tfoot>
+        </table>
+        <!-- Paginación -->
+        <div class="hm-pagination" id="burnPagination" style="margin-top:10px;display:none;">
+          <button id="burnPrevBtn" onclick="burnChangePage(-1)" disabled>&#8592; Anterior</button>
+          <span id="burnPageInfo"></span>
+          <button id="burnNextBtn" onclick="burnChangePage(1)">Siguiente &#8594;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ SECCIÓN 2: PRUEBAS & EJECUCIÓN ══ -->
+    <div class="section-title">Seguimiento de Pruebas &amp; Ejecución</div>
+    <div class="qa-grid" style="grid-template-columns:repeat(6,1fr)">
+      <div class="qa-card qa-blue">
+        <div class="qa-card-label">Funcionalidades Únicas (N2)</div>
+        <div class="qa-card-value" id="pruKpiTotal">—</div>
+        <div class="qa-card-sub">N2 distintos en Matriz CP</div>
+      </div>
+      <div class="qa-card qa-blue">
+        <div class="qa-card-label">Funcionalidades con CP</div>
+        <div class="qa-card-value" id="pruKpiFuncConCP">—</div>
+        <div class="qa-card-sub">N2 con al menos 1 caso registrado</div>
+      </div>
+      <div class="qa-card qa-blue">
+        <div class="qa-card-label">Total Casos de Prueba</div>
+        <div class="qa-card-value" id="pruKpiConCP">—</div>
+        <div class="qa-card-sub">ID TEST únicos registrados</div>
+      </div>
+      <div class="qa-card qa-gray">
+        <div class="qa-card-label">Sin Ejecutar</div>
+        <div class="qa-card-value" id="pruKpiSinEj">—</div>
+        <div class="qa-card-sub">sin resultado en ejecución</div>
+      </div>
+      <div class="qa-card qa-red">
+        <div class="qa-card-label">Incidencias</div>
+        <div class="qa-card-value" id="pruKpiFallido">—</div>
+        <div class="qa-card-sub">resultado = INCIDENCIA</div>
+      </div>
+      <div class="qa-card qa-green">
+        <div class="qa-card-label">Exitosos</div>
+        <div class="qa-card-value" id="pruKpiExitoso">—</div>
+        <div class="qa-card-sub">resultado = EXITOSO</div>
+      </div>
+    </div>
+
+    <!-- ══ SECCIÓN 3: DEFECTOS ══ -->
+    <div class="section-title">Seguimiento de Defectos</div>
+    <div class="qa-grid">
+      <div class="qa-card qa-red">
+        <div class="qa-card-label">Total Incidencias</div>
+        <div class="qa-card-value" id="defKpiTotal">—</div>
+        <div class="qa-card-sub">incidencias registradas</div>
+      </div>
+      <div class="qa-card qa-red">
+        <div class="qa-card-label">Severidad Alta</div>
+        <div class="qa-card-value" id="defKpiAlta">—</div>
+        <div class="qa-card-sub">requieren atención inmediata</div>
+      </div>
+      <div class="qa-card qa-orange">
+        <div class="qa-card-label">En Progreso</div>
+        <div class="qa-card-value" id="defKpiProgreso">—</div>
+        <div class="qa-card-sub">siendo atendidos</div>
+      </div>
+      <div class="qa-card qa-green">
+        <div class="qa-card-label">Resueltos / Cerrados</div>
+        <div class="qa-card-value" id="defKpiResueltos">—</div>
+        <div class="qa-card-sub">corregidos y verificados</div>
+      </div>
+    </div>
+
+    <!-- Tabla de defectos -->
+    <div class="qa-panel" style="overflow-x:auto;margin-bottom:20px;">
+      <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="font-size:.85rem;font-weight:700;color:#333;">Detalle de Defectos Registrados</div>
+          <div style="font-size:.72rem;color:var(--san-gray-600);margin-top:2px;">
+            Información completa de cada incidencia registrada en la Matriz de Incidencias
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select id="defFiltroEstado" onchange="defFiltrar()" style="font-size:.72rem;padding:4px 8px;border:1.5px solid #ddd;border-radius:5px;">
+            <option value="">— Estado —</option>
+          </select>
+          <select id="defFiltroSev" onchange="defFiltrar()" style="font-size:.72rem;padding:4px 8px;border:1.5px solid #ddd;border-radius:5px;">
+            <option value="">— Severidad —</option>
+          </select>
+        </div>
+      </div>
+      <table class="qa-owner-table" id="defTable">
+        <thead>
+          <tr>
+            <th style="min-width:120px;">ID Incidencia</th>
+            <th style="min-width:110px;">Tipo Incidencia</th>
+            <th style="min-width:200px;">Descripción</th>
+            <th style="text-align:center;min-width:90px;">Severidad</th>
+            <th style="min-width:120px;">Asignado A</th>
+            <th style="text-align:center;min-width:100px;">F. Encontrado</th>
+            <th style="text-align:center;min-width:100px;">F. Asignado</th>
+            <th style="text-align:center;min-width:100px;">F. Solución</th>
+            <th style="text-align:center;min-width:110px;">F. Retest/Cierre</th>
+            <th style="text-align:center;min-width:100px;">Estado</th>
+            <th style="text-align:center;min-width:80px;">Ciclos Reap.</th>
+            <th style="min-width:160px;">Comentarios</th>
+          </tr>
+        </thead>
+        <tbody id="defTableBody"></tbody>
+      </table>
+      <div class="hm-pagination" id="defPagination" style="margin-top:10px;display:none;">
+        <button id="defPrevBtn" onclick="defChangePage(-1)" disabled>&#8592; Anterior</button>
+        <span id="defPageInfo"></span>
+        <button id="defNextBtn" onclick="defChangePage(1)">Siguiente &#8594;</button>
+      </div>
+    </div>
+
+  </div><!-- /#mainContent -->
+</main>
+
+<footer>
+  <span id="footerSource">Sin datos cargados</span>
+  <span style="opacity:.4">|</span>
+  <span>Santander Consumer Bank – Proyecto Helios</span>
+  <span style="opacity:.4">|</span>
+  <span id="footerTs"></span>
+</footer>
+
+<script>
+/* ══════════════════════════════════════════════════════
+   DATOS GLOBALES
+══════════════════════════════════════════════════════ */
+let DATA_CP   = [];
+let DATA_EJEC = [];
+let DATA_INC  = [];
+let _currentFuncLevel = "n0";
+let _activeApp = "";   // ← aplicación seleccionada, "" = todas
+
+/* ── Limpieza profunda de strings del Excel ── */
+const cleanStr = s => {
+  if(s == null) return "";
+  return s.toString()
+    .replace(/[\u00A0\u200B\u200C\u200D\uFEFF\u00AD]/g, " ") // espacios invisibles → espacio normal
+    .replace(/\s+/g, " ")   // múltiples espacios → uno solo
+    .trim();
+};
+
+/* ── Normalizar para comparación: quita tildes, minúsculas, prefijos numéricos ── */
+const norm = s => cleanStr(s)
+  .toLowerCase()
+  .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  .replace(/^\d+[\.\-\)\s]+/, "")
+  .replace(/\s+/g, " ")
+  .trim();
+
+/* ── Macroprocesos FIJOS ── */
+const MACRO_ORDER = [
+  "Configuración Tecnológica",
+  "Configuración Funcional",
+  "Ventas",
+  "Postventa",
+  "Procesos de la Compañía",
+  "Regulatorios"
+];
+const MACRO_COLORS = {
+  "Configuración Tecnológica": "#1E88E5",
+  "Configuración Funcional":   "#8E24AA",
+  "Ventas":                    "#43A047",
+  "Postventa":                 "#FB8C00",
+  "Procesos de la Compañía":   "#EC0000",
+  "Regulatorios":              "#00897B"
+};
+
+/* ══════════════════════════════════════════════════════
+   LOADER / TOAST
+══════════════════════════════════════════════════════ */
+function showLoader(pct, sub){
+  document.getElementById("loadingOverlay").classList.add("active");
+  document.getElementById("loaderBar").style.width = pct + "%";
+  if(sub) document.getElementById("loaderSub").textContent = sub;
+}
+function hideLoader(){
+  document.getElementById("loadingOverlay").classList.remove("active");
+  document.getElementById("loaderBar").style.width = "0%";
+}
+function showToast(msg, type){
+  const t = document.getElementById("importToast");
+  t.textContent = msg; t.className = "show " + (type||"");
+  clearTimeout(t._timer); t._timer = setTimeout(()=>{ t.className=""; }, 5000);
+}
+
+/* ══════════════════════════════════════════════════════
+   IMPORT EXCEL
+══════════════════════════════════════════════════════ */
+function importExcel(input){
+  const file = input.files[0]; if(!file) return;
+  showLoader(10, "Leyendo archivo…");
+  const reader = new FileReader();
+  reader.onload = e => {
+    showLoader(60, "Parseando Excel…");
+    setTimeout(()=>{
+      try {
+        const wb = XLSX.read(e.target.result, {type:"array", cellDates:true});
+        const findSheet = kw => wb.SheetNames.find(n => n.replace(/\s+/g,"").toLowerCase().includes(kw));
+        const findHdr   = (rows, marks) => {
+          for(let i=0; i<Math.min(rows.length,10); i++){
+            if(rows[i] && rows[i].some(c => c && marks.some(m => c.toString().toLowerCase().trim().includes(m)))) return i;
+          }
+          return -1;
+        };
+        const buildCols = row => row.map(h => (h||"").toString().toLowerCase().replace(/\s+/g," ").trim());
+        const ci = (cols, ...names) => {
+          for(const n of names){ const i=cols.indexOf(n); if(i>=0) return i; }
+          for(const n of names){ const i=cols.findIndex(h=>h.includes(n)); if(i>=0) return i; }
+          return -1;
+        };
+        const g  = (r,i) => i>=0 && r[i]!=null ? cleanStr(r[i].toString()) : "";
+        const gd = (r,i) => {
+          if(i<0||!r[i]) return "";
+          return r[i] instanceof Date
+            ? r[i].toLocaleDateString("es-PE",{day:"2-digit",month:"2-digit",year:"numeric"})
+            : r[i].toString().trim();
+        };
+
+        /* ── Matriz CP ── */
+        showLoader(65,"Procesando Matriz CP…");
+        const shCP = findSheet("matrizcp") || findSheet("matricp") || findSheet("cp");
+        if(!shCP){ hideLoader(); showToast("❌ No se encontró 'Matriz CP'. Hojas: "+wb.SheetNames.join(", "),"error"); return; }
+        const rawCP = XLSX.utils.sheet_to_json(wb.Sheets[shCP],{header:1,defval:""});
+        const hCP   = findHdr(rawCP,["id test","id caso","caso de prueba"]);
+        if(hCP<0){ hideLoader(); showToast("❌ Sin encabezado en Matriz CP","error"); return; }
+        const cCP = buildCols(rawCP[hCP]);
+
+        console.log("🗂️ Headers Matriz CP:", cCP);
+        console.table(cCP.map((h,i)=>({col:i,header:h})));
+
+        const cpC = {
+          idTest:  ci(cCP,"id test","id caso de prueba","id caso"),
+          idFunc:  ci(cCP,"id funcionalidad","id func","idfunc","id_func","# funcionalidad","n° funcionalidad","id"),
+          n0:      ci(cCP,"nivel 0","n0","nivel0","macroproceso"),
+          n1:      ci(cCP,"nivel 1","n1","nivel1","proceso"),
+          n2:      ci(cCP,"nivel 2","n2","nivel2","funcionalidad"),
+          canal:   ci(cCP,"canal impactado","canal"),
+          app:     ci(cCP,"aplicacion","aplicación","aplicaci","app","sistema","aplicativo"),  // ← más variantes
+          owner:   ci(cCP,"owner"),
+          caso:    ci(cCP,"caso de prueba","descripcion caso","caso"),
+          reqData: ci(cCP,"requiere data","req data"),
+          prior:   ci(cCP,"prioridad negocio","prioridad"),
+          usrNeg:  ci(cCP,"usuario negocio","usuario de negocio","usuario"),
+          respQA:  ci(cCP,"responsable qa","responsable de qa"),
+          ambiente:ci(cCP,"ambiente")
+        };
+
+        /* ── DEBUG: ver qué columna se mapeó a app ── */
+        console.warn("🔍 app mapeado a columna:", cpC.app >= 0
+          ? `[${cpC.app}] = "${cCP[cpC.app]}"`
+          : "❌ NO ENCONTRADO");
+
+        console.log("🔍 Mapeo columnas CP:", {
+          idTest:  cpC.idTest >=0?`✅ col[${cpC.idTest}]="${cCP[cpC.idTest]}"`:"❌ NO ENCONTRADO",
+          idFunc:  cpC.idFunc >=0?`✅ col[${cpC.idFunc}]="${cCP[cpC.idFunc]}"`:"❌ NO ENCONTRADO",
+          n0:      cpC.n0     >=0?`✅ col[${cpC.n0}]="${cCP[cpC.n0]}"`:"❌ NO ENCONTRADO",
+          n1:      cpC.n1     >=0?`✅ col[${cpC.n1}]="${cCP[cpC.n1]}"`:"❌ NO ENCONTRADO",
+          n2:      cpC.n2     >=0?`✅ col[${cpC.n2}]="${cCP[cpC.n2]}"`:"❌ NO ENCONTRADO",
+          app:     cpC.app    >=0?`✅ col[${cpC.app}]="${cCP[cpC.app]}"`:"❌ NO ENCONTRADO",
+          owner:   cpC.owner  >=0?`✅ col[${cpC.owner}]="${cCP[cpC.owner]}"`:"❌ NO ENCONTRADO",
+          respQA:  cpC.respQA >=0?`✅ col[${cpC.respQA}]="${cCP[cpC.respQA]}"`:"❌ NO ENCONTRADO",
+        });
+
+        if(cpC.idTest<0){ hideLoader(); showToast("❌ Columna 'ID TEST' no encontrada en Matriz CP","error"); return; }
+        DATA_CP=[];
+        for(let i=hCP+1;i<rawCP.length;i++){
+          const r=rawCP[i]; const idT=g(r,cpC.idTest); if(!idT) continue;
+          DATA_CP.push({
+            idTest:g(r,cpC.idTest), idFunc:g(r,cpC.idFunc),
+            n0:g(r,cpC.n0), n1:g(r,cpC.n1), n2:g(r,cpC.n2),
+            canal:g(r,cpC.canal), app:g(r,cpC.app), owner:g(r,cpC.owner),
+            caso:g(r,cpC.caso), reqData:g(r,cpC.reqData), prioridad:g(r,cpC.prior),
+            usrNeg:g(r,cpC.usrNeg), respQA:g(r,cpC.respQA), ambiente:g(r,cpC.ambiente)
+          });
+        }
+        if(!DATA_CP.length){ hideLoader(); showToast("⚠️ Matriz CP sin filas de datos.","error"); return; }
+
+        /* ── Matriz Ejecución ── */
+        showLoader(78,"Procesando Matriz Ejecución…");
+        const shEj=findSheet("ejecuci")||findSheet("matrizej");
+        DATA_EJEC=[];
+        if(shEj){
+          const rawEj=XLSX.utils.sheet_to_json(wb.Sheets[shEj],{header:1,defval:""});
+          const hEj=findHdr(rawEj,["id test","estado ejecuci","dia ejecutado","resultado"]);
+          if(hEj>=0){
+            const cEj=buildCols(rawEj[hEj]);
+
+            console.log("🗂️ Headers Matriz Ejecución:", cEj);
+            console.table(cEj.map((h,i)=>({col:i,header:h})));
+
+            const ejC={
+              idEjec:    ci(cEj,"id ejecución","id ejecucion","id"),
+              idTest:    ci(cEj,"id test","id caso"),
+              idFunc:    ci(cEj,"id funcionalidad","id func","id"),
+              /* ── ESTADO EJECUCIÓN es el que manda ── */
+              resultado: ci(cEj,
+                            "estado ejecuci",   // ← PRIMERO: "ESTADO EJECUCIÓN"
+                            "estado ejecución",
+                            "estado ejecucion",
+                            "resultado obtenido", // ← fallback
+                            "resultado"           // ← último recurso
+                          ),
+              /* ── DIA EJECUTADO / FECHA ── */
+              fecha:     ci(cEj,
+                            "dia ejecutado",     // ← tu columna real
+                            "día ejecutado",
+                            "fecha ejecuci",
+                            "fecha de ejecuci",
+                            "fecha"
+                          ),
+              usrNeg:    ci(cEj,"usuario negocio","usuario de negocio"),
+              respTI:    ci(cEj,"responsable ti","responsable de ti"),
+              usrPlat:   ci(cEj,"usuario plataforma","usuario plat","ejecutor","ejecutado por"),
+              evidencia: ci(cEj,"evidencia"),
+              obs:       ci(cEj,"resultado obtenido","observaci")
+            };
+
+            console.warn("🔍 Mapeo Matriz Ejecución:", {
+              idTest:    ejC.idTest    >=0?`✅ col[${ejC.idTest}]="${cEj[ejC.idTest]}"`    :"❌ NO ENCONTRADO",
+              idFunc:    ejC.idFunc    >=0?`✅ col[${ejC.idFunc}]="${cEj[ejC.idFunc]}"`    :"❌ NO ENCONTRADO",
+              resultado: ejC.resultado >=0?`✅ col[${ejC.resultado}]="${cEj[ejC.resultado]}"`:"❌ NO ENCONTRADO",
+              fecha:     ejC.fecha     >=0?`✅ col[${ejC.fecha}]="${cEj[ejC.fecha]}"`      :"❌ NO ENCONTRADO",
+            });
+
+            DATA_EJEC=[];
+            for(let i=hEj+1;i<rawEj.length;i++){
+              const r=rawEj[i];
+              const idT=g(r,ejC.idTest);
+              if(!idT) continue;
+
+              let res = g(r, ejC.resultado);
+              const resUp = res.toUpperCase();
+              if(resUp==="CORRECTO"||resUp==="OK"||resUp==="APROBADO"||resUp==="PASSED") res="EXITOSO";
+              if(resUp==="INCORRECTO"||resUp==="KO"||resUp==="FAILED")                   res="FALLIDO";
+
+              /* ── Normalizar fecha sea Date, texto "6-Abr", "DD/MM/YYYY", ISO, etc. ── */
+              const rawFecha = ejC.fecha >= 0 ? r[ejC.fecha] : null;
+              let fechaNorm = "";
+              if(rawFecha){
+                if(rawFecha instanceof Date){
+                  /* Objeto Date real del Excel → DD/MM/YYYY */
+                  const dd = String(rawFecha.getDate()).padStart(2,"0");
+                  const mm = String(rawFecha.getMonth()+1).padStart(2,"0");
+                  const yy = rawFecha.getFullYear();
+                  fechaNorm = `${dd}/${mm}/${yy}`;
+                } else {
+                  /* Texto: "6-Abr", "06/04/2026", "2026-04-06", etc. → normFecha lo resuelve */
+                  fechaNorm = rawFecha.toString().trim();
+                }
+              }
+
+              DATA_EJEC.push({
+                idEjec:    g(r, ejC.idEjec),
+                idTest:    idT,
+                idFunc:    g(r, ejC.idFunc),
+                resultado: res,
+                fecha:     fechaNorm,   // ← ya normalizado
+                usrNeg:    g(r, ejC.usrNeg),
+                respTI:    g(r, ejC.respTI),
+                usrPlat:   g(r, ejC.usrPlat),
+                evidencia: g(r, ejC.evidencia),
+                obs:       g(r, ejC.obs)
+              });
+            }
+
+            console.log(`✅ DATA_EJEC cargado: ${DATA_EJEC.length} filas`);
+            console.table(DATA_EJEC.slice(0,5));
+          }
+        }
+
+        /* ── Matriz Incidencias ── */
+        showLoader(88,"Procesando Matriz de Incidencias…");
+        const shInc=findSheet("incidencia")||findSheet("matrizinc");
+        DATA_INC=[];
+        if(shInc){
+          const rawInc=XLSX.utils.sheet_to_json(wb.Sheets[shInc],{header:1,defval:""});
+          const hInc=findHdr(rawInc,["id incidencia","id defecto","tipo incidencia","tipo inicidencia"]);
+          if(hInc>=0){
+            const cInc=buildCols(rawInc[hInc]);
+
+            console.log("🗂️ Headers Matriz Incidencias:", cInc);
+            console.table(cInc.map((h,i)=>({col:i,header:h})));
+
+            const incC={
+              idInc:      ci(cInc,"id incidencia","id defecto","id inc"),
+              tipo:       ci(cInc,"tipo inicidencia","tipo incidencia","tipo de incidencia","tipo"),
+              desc:       ci(cInc,"descripcion","descripción","desc"),
+              sev:        ci(cInc,"severidad"),
+              asignado:   ci(cInc,"asignado a","asignado"),
+              fechaEnc:   ci(cInc,"fecha encontrado","fecha enc","fecha hallado"),
+              fechaAsig:  ci(cInc,"fecha asignado","fecha asig"),
+              fechaSol:   ci(cInc,"fecha solucion","fecha solución","fecha sol"),
+              fechaRetest:ci(cInc,"fecha de retest","fecha retest","fecha cierre","fecha de retest/cierre"),
+              estado:     ci(cInc,"estado defecto","estado"),
+              ciclos:     ci(cInc,"ciclos reapertura","ciclos reap","ciclos"),
+              comentarios:ci(cInc,"comentarios","observaci","obs")
+            };
+
+            for(let i=hInc+1;i<rawInc.length;i++){
+              const r=rawInc[i];
+              const idI=g(r,incC.idInc);
+              if(!idI) continue;
+              DATA_INC.push({
+                idInc:       idI,
+                tipo:        g(r, incC.tipo),
+                desc:        g(r, incC.desc),
+                severidad:   g(r, incC.sev),
+                asignado:    g(r, incC.asignado),
+                fechaEnc:    gd(r, incC.fechaEnc),
+                fechaAsig:   gd(r, incC.fechaAsig),
+                fechaSol:    gd(r, incC.fechaSol),
+                fechaRetest: gd(r, incC.fechaRetest),
+                estado:      g(r, incC.estado),
+                ciclos:      g(r, incC.ciclos),
+                comentarios: g(r, incC.comentarios)
+              });
+            }
+
+            console.log(`✅ DATA_INC cargado: ${DATA_INC.length} filas`);
+            console.table(DATA_INC.slice(0,5));
+          }
+        }
+
+        /* ── Finalizar ── */
+        showLoader(94,"Construyendo tablero…");
+        document.getElementById("splashEmpty").classList.add("hidden");
+        document.getElementById("mainContent").classList.remove("hidden");
+        showLoader(97,"Renderizando…");
+        _activeApp = "";
+        rebuildFilters();
+        rebuildAppFilter();    // ← ESTA LÍNEA FALTABA
+        applyFilters();
+        document.getElementById("footerSource").innerHTML=`Datos cargados desde <strong>${file.name}</strong>`;
+        updateHeaderMeta();
+        showLoader(100,"¡Listo!");
+        setTimeout(hideLoader,500);
+        showToast(`✅ ${DATA_CP.length} CPs · ${DATA_EJEC.length} ejec · ${DATA_INC.length} inc`,"success");
+
+      } catch(err){ hideLoader(); showToast("❌ Error: "+err.message,"error"); console.error(err); }
+    },60);
+  };
+  reader.readAsArrayBuffer(file); input.value="";
+}
+
+/* ══════════════════════════════════════════════════════
+   FILTRO DINÁMICO POR APLICACIÓN
+══════════════════════════════════════════════════════ */
+function rebuildAppFilter(){
+  const container = document.getElementById("appFilterBtns");
+  container.innerHTML = "";
+
+  /* Botón "Todas" */
+  const btnAll = document.createElement("button");
+  btnAll.className = "app-filter-btn all-btn" + (_activeApp === "" ? " active" : "");
+  btnAll.textContent = "Todas";
+  btnAll.onclick = () => { _activeApp = ""; rebuildAppFilter(); applyFilters(); };
+  container.appendChild(btnAll);
+
+  /* Obtener apps únicas ordenadas */
+  const apps = [...new Set(DATA_CP.map(r => cleanStr(r.app)).filter(Boolean))].sort();
+
+  apps.forEach(app => {
+    const btn = document.createElement("button");
+    btn.className = "app-filter-btn" + (_activeApp === app ? " active" : "");
+    btn.textContent = app;
+    /* Contar funcionalidades únicas de esta app */
+    const funcs = new Set(
+      DATA_CP
+        .filter(r => cleanStr(r.app) === app && cleanStr(r.n2) !== "")
+        .map(r => { const id = cleanStr(r.idFunc); return id !== "" ? id.toLowerCase() : cleanStr(r.n2).toLowerCase(); })
+    ).size;
+    btn.title = `${funcs} funcionalidad${funcs !== 1 ? "es" : ""}`;
+    btn.onclick = () => { _activeApp = app; rebuildAppFilter(); applyFilters(); };
+    container.appendChild(btn);
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   FILTROS
+══════════════════════════════════════════════════════ */
+const QA_FILTERS  = [];
+const DEF_FILTERS = [];
+const ALL_FILTERS = [];
+
+function rebuildFilters(){ /* vacío, ya no hay selects */ }
+
+function getFilteredData(){
+  return { cp: DATA_CP, ej: DATA_EJEC, inc: DATA_INC };
+}
+
+function applyFilters(){
+  const d = getFilteredData();
+
+  const cpFiltered = _activeApp !== ""
+    ? d.cp.filter(r => cleanStr(r.app) === _activeApp)
+    : d.cp;
+
+  const cpIds   = new Set(cpFiltered.map(r => r.idTest).filter(Boolean));
+  const funcIds = new Set(cpFiltered.map(r => r.idFunc).filter(Boolean));
+
+  const ejFiltered  = _activeApp !== ""
+    ? d.ej.filter(r => !r.idTest || cpIds.has(r.idTest))
+    : d.ej;
+
+  const incFiltered = _activeApp !== ""
+    ? d.inc.filter(r => !r.idFunc || funcIds.has(r.idFunc))
+    : d.inc;
+
+  updateMacroTable(cpFiltered, ejFiltered);
+  updateHierTable(cpFiltered,  ejFiltered);
+  updateBurndown(cpFiltered,   ejFiltered);   // ← nuevo
+  updateSec2(cpFiltered,       ejFiltered);
+  updateSec3(incFiltered,      cpFiltered);
+}
+
+function resetFilters(){
+  ALL_FILTERS.forEach(id=>{ const s=document.getElementById(id); if(s) s.value=""; });
+  applyFilters();
+}
+
+/* ══════════════════════════════════════════════════════
+   SECCIÓN 1 — TABLA MACROPROCESOS
+══════════════════════════════════════════════════════ */
+function updateMacroTable(cpData, ejData){
+  cpData = cpData || DATA_CP;
+  ejData = ejData || DATA_EJEC;
+
+  const resMap = buildResMap(ejData);  // ← usa buildResMap
+
+  const extraN0 = [...new Set(cpData.map(r => r.n0).filter(Boolean))]
+    .filter(n => !MACRO_ORDER.some(m => norm(m) === norm(n)));
+  const macroList = [...MACRO_ORDER, ...extraN0];
+
+  const tbody = document.getElementById("macroTableBody");
+  const tfoot = document.getElementById("macroTableFoot");
+  tbody.innerHTML = ""; tfoot.innerHTML = "";
+
+  let totN0=new Set(), totN1=new Set(), totN2=new Set();
+  let totCP=0, totEx=0, totFa=0, totSin=0;
+  let rowIdx = 1;
+
+  macroList.forEach(macro => {
+    const rows = cpData.filter(r => r.n0 && norm(r.n0) === norm(macro));
+
+    const n0s = new Set(rows.map(r => r.n0).filter(v => v && cleanStr(v) !== ""));
+    const n1s = new Set(rows.filter(r => r.n1 && cleanStr(r.n1) !== "").map(r => cleanStr(r.n1)));
+    const n2s = new Set(rows.filter(r => r.n2 && cleanStr(r.n2) !== "").map(r => {
+      const id = cleanStr(r.idFunc);
+      return id !== "" ? id.toLowerCase() : cleanStr(r.n2).toLowerCase();
+    }));
+
+    const cpTests = rows.map(r => r.idTest).filter(Boolean);
+    const ex  = cpTests.filter(id => getResultado(resMap,id).toUpperCase().includes("EXITOSO")).length;
+    const fa  = cpTests.filter(id => {
+      const res = getResultado(resMap,id).toUpperCase();
+      return res.includes("FALLIDO") || res.includes("INCIDENCIA");
+    }).length;
+    const sin = cpTests.filter(id => !getResultado(resMap,id).trim()).length;
+    const total = cpTests.length;
+    const pct   = total > 0 ? Math.round(ex / total * 100) : 0;
+
+    if(_activeApp !== "" && total === 0) return;
+
+    const color    = MACRO_COLORS[macro] || "#9E9E9E";
+    const pctColor = pct>=80?"#43A047":pct>=40?"#FB8C00":"#EC0000";
+    const isEmpty  = total === 0;
+
+    n0s.forEach(v => totN0.add(v));
+    n1s.forEach(v => totN1.add(v));
+    n2s.forEach(v => totN2.add(`${norm(macro)}|||${v}`));
+    totCP  += total;
+    totEx  += ex;
+    totFa  += fa;
+    totSin += sin;
+
+    const tr = document.createElement("tr");
+    if(isEmpty) tr.className = "macro-row-empty";
+    tr.innerHTML = `
+      <td style="text-align:center;font-weight:700;color:#999;font-size:.72rem;">${rowIdx++}</td>
+      <td><span class="macro-badge"><img src="favicon.ico" class="macro-dot" alt=""/>${macro}</span></td>
+      <td style="text-align:center;font-weight:700;color:#333;">${isEmpty?"0":n0s.size||1}</td>
+      <td style="text-align:center;font-weight:700;color:#555;">${isEmpty?"0":n1s.size}</td>
+      <td style="text-align:center;font-weight:700;color:#555;">${isEmpty?"0":n2s.size}</td>
+      <td style="text-align:center;font-weight:700;color:#1E88E5;">${isEmpty?"0":total}</td>
+      <td style="min-width:120px;">
+        <div class="macro-progress">
+          <div class="macro-progress-track">
+            <div class="macro-progress-fill" style="width:${pct}%;background:${isEmpty?"#EEE":pctColor};"></div>
+          </div>
+          <span class="macro-pct" style="color:${isEmpty?"#CCC":pctColor}">${pct}%</span>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  const totPct  = totCP>0 ? Math.round(totEx/totCP*100) : 0;
+  const totPctC = totPct>=80?"#43A047":totPct>=40?"#FB8C00":"#EC0000";
+  tfoot.innerHTML = `<tr>
+    <td colspan="2" style="font-weight:700;">TOTAL</td>
+    <td style="text-align:center;font-weight:700;">${totN0.size}</td>
+    <td style="text-align:center;font-weight:700;">${totN1.size}</td>
+    <td style="text-align:center;font-weight:700;">${totN2.size}</td>
+    <td style="text-align:center;font-weight:700;color:#1E88E5;">${totCP}</td>
+    <td><div class="macro-progress">
+      <div class="macro-progress-track">
+        <div class="macro-progress-fill" style="width:${totPct}%;background:${totPctC};"></div>
+      </div>
+      <span class="macro-pct" style="color:${totPctC}">${totPct}%</span>
+    </div></td>
+  </tr>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   SECCIÓN 1B — JERARQUÍA N0 → N1 → N2 (colapsable)
+══════════════════════════════════════════════════════ */
+function updateHierTable(cpData, ejData){
+  cpData = cpData || DATA_CP;
+  ejData = ejData || DATA_EJEC;
+
+  const resMap = buildResMap(ejData);  // ← usa buildResMap
+
+  const tbody = document.getElementById("hierTableBody");
+  tbody.innerHTML = "";
+
+  const tree = {};
+  MACRO_ORDER.forEach(m => { tree[m] = {}; });
+
+  cpData.forEach(r => {
+    const n0raw  = cleanStr(r.n0);
+    const n1     = cleanStr(r.n1) || "(Sin N1)";
+    const idF    = cleanStr(r.idFunc);
+    const n2name = cleanStr(r.n2) || "(Sin N2)";
+    const n2key  = idF !== "" ? idF : n2name;
+    const macro  = MACRO_ORDER.find(m => norm(m) === norm(n0raw)) || n0raw;
+    if(!macro) return;
+    if(!tree[macro])            tree[macro] = {};
+    if(!tree[macro][n1])        tree[macro][n1] = {};
+    if(!tree[macro][n1][n2key]) tree[macro][n1][n2key] = { name: n2name, idF, rows: [] };
+    tree[macro][n1][n2key].rows.push(r);
+  });
+
+  MACRO_ORDER.forEach(macro => {
+    const n1Map = tree[macro];
+    if(!n1Map || !Object.keys(n1Map).length) return;
+
+    const color    = MACRO_COLORS[macro] || "#9E9E9E";
+    const macroKey = norm(macro).replace(/\s+/g,"_");
+
+    /* ── Totales N0 ── */
+    let n0CP=0, n0Ex=0, n0Fa=0, n0Sin=0, n0Funcs=0;
+    Object.values(n1Map).forEach(n2Map => {
+      n0Funcs += Object.keys(n2Map).length;
+      Object.values(n2Map).forEach(({rows}) => {
+        rows.forEach(r => {
+          const res = getResultado(resMap, r.idTest).toUpperCase();
+          n0CP++;
+          if(res.includes("EXITOSO"))                                    n0Ex++;
+          else if(res.includes("FALLIDO")||res.includes("INCIDENCIA"))  n0Fa++;
+          else                                                            n0Sin++;
+        });
+      });
+    });
+
+    /* ── Si no hay CPs en este macro → omitir cuando hay filtro activo ── */
+    if(_activeApp !== "" && n0CP === 0) return;
+
+    const n0Pct  = n0CP > 0 ? Math.round(n0Ex/n0CP*100) : 0;
+    const n0PctC = n0Pct>=80?"#43A047":n0Pct>=40?"#FB8C00":"#EC0000";
+
+    /* ── Fila N0 (clickeable) ── */
+    const trN0 = document.createElement("tr");
+    trN0.className = "hier-n0-row";
+    trN0.dataset.key = macroKey;
+    trN0.innerHTML = `
+      <td colspan="2">
+        <span class="hier-n0-badge">
+          <img src="favicon.ico" class="hier-n0-dot" alt=""/>
+          <span class="hier-toggle closed" id="tog_n0_${macroKey}">▼</span>
+          ${macro}
+        </span>
+      </td>
+      <td style="text-align:center;color:#555;font-size:.72rem;font-weight:600;">${n0Funcs} func.</td>
+      <td style="text-align:center;color:#1E88E5;font-weight:700;">${n0CP}</td>
+      <td style="text-align:center;color:#43A047;font-weight:700;">${n0Ex}</td>
+      <td style="text-align:center;color:#EC0000;font-weight:700;">${n0Fa}</td>
+      <td style="text-align:center;color:#9E9E9E;">${n0Sin}</td>
+      <td>
+        <div class="macro-progress">
+          <div class="macro-progress-track">
+            <div class="macro-progress-fill" style="width:${n0Pct}%;background:${n0PctC};"></div>
+          </div>
+          <span class="macro-pct" style="color:${n0PctC}">${n0Pct}%</span>
+        </div>
+      </td>`;
+    trN0.addEventListener("click", () => {
+      const tog = document.getElementById(`tog_n0_${macroKey}`);
+      const isOpen = tog.classList.contains("open");
+      tog.classList.toggle("open",  !isOpen);
+      tog.classList.toggle("closed", isOpen);
+      tbody.querySelectorAll(`[data-n0="${macroKey}"]`).forEach(tr => {
+        tr.classList.toggle("hier-collapsed", isOpen);
+      });
+    });
+    tbody.appendChild(trN0);
+
+    /* ── Filas N1 — por defecto colapsadas ── */
+    Object.entries(n1Map).forEach(([n1, n2Map], n1Idx) => {
+      let n1CP=0, n1Ex=0, n1Fa=0, n1Sin=0;
+      Object.values(n2Map).forEach(({rows}) => {
+        rows.forEach(r => {
+          const res = getResultado(resMap, r.idTest).toUpperCase();
+          n1CP++;
+          if(res.includes("EXITOSO"))                                    n1Ex++;
+          else if(res.includes("FALLIDO")||res.includes("INCIDENCIA"))  n1Fa++;
+          else                                                            n1Sin++;
+        });
+      });
+
+      /* ── N1 sin CPs → omitir cuando hay filtro activo ── */
+      if(_activeApp !== "" && n1CP === 0) return;
+
+      /* ── N2 con CPs → solo los que tengan filas ── */
+      const n2Entries = Object.entries(n2Map).filter(([, {rows}]) => rows.length > 0);
+
+      /* ── Si solo hay                                                                                                                                 1 N2 y su nombre es igual al N1 → no mostrar fila N1 separada ── */
+      const skipN1Row = n2Entries.length === 1 &&
+        norm(n2Entries[0][1].name) === norm(n1);
+
+      const n1Pct  = n1CP > 0 ? Math.round(n1Ex/n1CP*100) : 0;
+      const n1PctC = n1Pct>=80?"#43A047":n1Pct>=40?"#FB8C00":"#EC0000";
+      const n1Key  = `${macroKey}_n1_${n1Idx}`;
+
+      if(!skipN1Row){
+        const trN1 = document.createElement("tr");
+        trN1.className = "hier-n1-row hier-collapsed";   // ← colapsado por defecto
+        trN1.dataset.n0  = macroKey;
+        trN1.dataset.key = n1Key;
+        trN1.innerHTML = `
+          <td></td>
+          <td><span class="hier-toggle closed" id="tog_n1_${n1Key}">▼</span>${n1}</td>
+          <td style="text-align:center;color:#888;font-size:.7rem;">${n2Entries.length} func.</td>
+          <td style="text-align:center;color:#1E88E5;">${n1CP}</td>
+          <td style="text-align:center;color:#43A047;">${n1Ex}</td>
+          <td style="text-align:center;color:#EC0000;">${n1Fa}</td>
+          <td style="text-align:center;color:#9E9E9E;">${n1Sin}</td>
+          <td>
+            <div class="macro-progress">
+              <div class="macro-progress-track">
+                <div class="macro-progress-fill" style="width:${n1Pct}%;background:${n1PctC};"></div>
+              </div>
+              <span class="macro-pct" style="color:${n1PctC}">${n1Pct}%</span>
+            </div>
+          </td>`;
+        trN1.addEventListener("click", () => {
+          const tog = document.getElementById(`tog_n1_${n1Key}`);
+          const isOpen = tog.classList.contains("open");
+          tog.classList.toggle("open",   !isOpen);
+          tog.classList.toggle("closed",  isOpen);
+          tbody.querySelectorAll(`[data-n1="${n1Key}"]`).forEach(tr => {
+            tr.classList.toggle("hier-collapsed", isOpen);
+          });
+        });
+        tbody.appendChild(trN1);
+      }
+
+      /* ── Filas N2 — por defecto colapsadas ── */
+      n2Entries.forEach(([, {name, idF, rows}]) => {
+        const n2CP  = rows.length;
+        const n2Ex  = rows.filter(r => getResultado(resMap,r.idTest).toUpperCase().includes("EXITOSO")).length;
+        const n2Fa  = rows.filter(r => {
+          const res = getResultado(resMap,r.idTest).toUpperCase();
+          return res.includes("FALLIDO") || res.includes("INCIDENCIA");
+        }).length;
+        const n2Sin = rows.filter(r => !getResultado(resMap,r.idTest).trim()).length;
+        const n2Pct  = n2CP > 0 ? Math.round(n2Ex/n2CP*100) : 0;
+        const n2PctC = n2Pct>=80?"#43A047":n2Pct>=40?"#FB8C00":"#EC0000";
+
+        const trN2 = document.createElement("tr");
+        trN2.className = "hier-n2-row hier-collapsed";   // ← colapsado por defecto
+        trN2.dataset.n0 = macroKey;
+        trN2.dataset.n1 = n1Key;
+        trN2.innerHTML = `
+          <td></td>
+          <td></td>
+          <td>${idF?`<span style="color:#aaa;font-size:.67rem;margin-right:4px;">${idF}</span>`:""}${name}</td>
+          <td style="text-align:center;font-weight:700;color:#1E88E5;">${n2CP}</td>
+          <td style="text-align:center;font-weight:700;color:#43A047;">${n2Ex}</td>
+          <td style="text-align:center;font-weight:700;color:#EC0000;">${n2Fa}</td>
+          <td style="text-align:center;color:#9E9E9E;">${n2Sin}</td>
+          <td>
+            <div class="macro-progress">
+              <div class="macro-progress-track">
+                <div class="macro-progress-fill" style="width:${n2Pct}%;background:${n2PctC};"></div>
+              </div>
+              <span class="macro-pct" style="color:${n2PctC}">${n2Pct}%</span>
+            </div>
+          </td>`;
+        tbody.appendChild(trN2);
+      });
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════════════
+   SECCIÓN 2 — PRUEBAS & EJECUCIÓN
+══════════════════════════════════════════════════════ */
+let _pruChart = null;
+
+function updateSec2(cpData, ejData){
+  cpData = cpData || DATA_CP;
+  ejData = ejData || DATA_EJEC;
+
+  const resMap = buildResMap(ejData);  // ← usa buildResMap
+
+  const funcSet = new Set(
+    cpData.filter(r => r.n2 && cleanStr(r.n2) !== "")
+      .map(r => { const id=cleanStr(r.idFunc); return id!==""?id.toLowerCase():cleanStr(r.n2).toLowerCase(); })
+  );
+  const funcConCP = new Set(
+    cpData.filter(r => r.idTest && r.n2 && cleanStr(r.n2) !== "")
+      .map(r => { const id=cleanStr(r.idFunc); return id!==""?id.toLowerCase():cleanStr(r.n2).toLowerCase(); })
+  );
+
+  const totalCPs = new Set(cpData.map(r => r.idTest).filter(Boolean)).size;
+
+  /* ── Cruzar CP con Ejecución por ID TEST ── */
+  const exitosos = cpData.filter(r =>
+    r.idTest && getResultado(resMap, r.idTest).toUpperCase().includes("EXITOSO")
+  ).length;
+
+  const fallidos = cpData.filter(r => {
+    if(!r.idTest) return false;
+    const res = getResultado(resMap, r.idTest).toUpperCase();
+    return res.includes("FALLIDO") || res.includes("INCIDENCIA");
+  }).length;
+
+  const sinEj = cpData.filter(r =>
+    r.idTest && !getResultado(resMap, r.idTest).trim()
+  ).length;
+
+  document.getElementById("pruKpiTotal").textContent     = funcSet.size;
+  document.getElementById("pruKpiFuncConCP").textContent = funcConCP.size;
+  document.getElementById("pruKpiConCP").textContent     = totalCPs;
+  document.getElementById("pruKpiSinEj").textContent     = sinEj;
+  document.getElementById("pruKpiFallido").textContent   = fallidos;
+  document.getElementById("pruKpiExitoso").textContent   = exitosos;
+}
+
+function updateSec3(incData){
+  incData = incData || DATA_INC;
+
+  const total     = incData.length;
+  const alta      = incData.filter(r => (r.severidad||"").toUpperCase().includes("ALT")).length;
+  const progreso  = incData.filter(r => (r.estado||"").toUpperCase().includes("PROG")).length;
+  const resueltos = incData.filter(r => {
+    const e = (r.estado||"").toUpperCase();
+    return e.includes("RESUEL") || e.includes("CERRAD") || e.includes("CLOSE");
+  }).length;
+
+  document.getElementById("defKpiTotal").textContent     = total;
+  document.getElementById("defKpiAlta").textContent      = alta;
+  document.getElementById("defKpiProgreso").textContent  = progreso;
+  document.getElementById("defKpiResueltos").textContent = resueltos;
+
+  /* ── Poblar selects de filtro ── */
+  const selEst = document.getElementById("defFiltroEstado");
+  const selSev = document.getElementById("defFiltroSev");
+  const estados    = [...new Set(incData.map(r=>r.estado).filter(Boolean))].sort();
+  const severidades= [...new Set(incData.map(r=>r.severidad).filter(Boolean))].sort();
+  selEst.innerHTML = `<option value="">— Estado —</option>` + estados.map(e=>`<option value="${e.toLowerCase()}">${e}</option>`).join("");
+  selSev.innerHTML = `<option value="">— Severidad —</option>` + severidades.map(s=>`<option value="${s.toLowerCase()}">${s}</option>`).join("");
+
+  /* ── Render tabla ── */
+  _defRows = incData;
+  _defPage = 1;
+  renderDefTable();
+}
+
+/* ══════════════════════════════════════════════════════
+   DATOS DE PRUEBA
+══════════════════════════════════════════════════════ */
+let _defRows     = [];
+let _defPage     = 1;
+const DEF_PAGE_SIZE = 5;
+
+const SEV_COLOR = sev => {
+  const s = (sev||"").toUpperCase();
+  if(s.includes("ALT")||s.includes("CRITI")) return {bg:"#ffebee",color:"#C62828",border:"#ef9a9a"};
+  if(s.includes("MED"))                       return {bg:"#fff3e0",color:"#E65100",border:"#ffcc80"};
+  if(s.includes("BAJ"))                       return {bg:"#e8f5e9",color:"#2E7D32",border:"#a5d6a7"};
+  return {bg:"#f5f5f5",color:"#555",border:"#ddd"};
+};
+const EST_COLOR = est => {
+  const e = (est||"").toUpperCase();
+  if(e.includes("CERRAD")||e.includes("RESUEL")||e.includes("CLOSE")) return {bg:"#e8f5e9",color:"#2E7D32"};
+  if(e.includes("PROG")||e.includes("ASIGN"))                          return {bg:"#fff3e0",color:"#E65100"};
+  if(e.includes("ABIERT")||e.includes("NUEVO")||e.includes("OPEN"))   return {bg:"#ffebee",color:"#C62828"};
+  return {bg:"#f5f5f5",color:"#555"};
+};
+
+function defFiltrar(){
+  const fEst = document.getElementById("defFiltroEstado").value.toLowerCase();
+  const fSev = document.getElementById("defFiltroSev").value.toLowerCase();
+  _defRows = DATA_INC.filter(r => {
+    const okEst = !fEst || (r.estado||"").toLowerCase().includes(fEst);
+    const okSev = !fSev || (r.severidad||"").toLowerCase().includes(fSev);
+    return okEst && okSev;
+  });
+  _defPage = 1;
+  renderDefTable();
+}
+
+function defChangePage(dir){
+  const totalPages = Math.ceil(_defRows.length / DEF_PAGE_SIZE);
+  _defPage = Math.max(1, Math.min(_defPage + dir, totalPages));
+  renderDefTable();
+}
+
+function renderDefTable(){
+  const tbody      = document.getElementById("defTableBody");
+  const pagination = document.getElementById("defPagination");
+  tbody.innerHTML  = "";
+
+  if(_defRows.length === 0){
+    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#aaa;padding:20px;">Sin defectos registrados</td></tr>`;
+    pagination.style.display = "none";
+    return;
+  }
+
+  const totalPages = Math.ceil(_defRows.length / DEF_PAGE_SIZE);
+  const start      = (_defPage - 1) * DEF_PAGE_SIZE;
+  const pageRows   = _defRows.slice(start, start + DEF_PAGE_SIZE);
+
+  pageRows.forEach(r => {
+    const sc = SEV_COLOR(r.severidad);
+    const ec = EST_COLOR(r.estado);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td style="font-weight:700;white-space:nowrap;color:#1E88E5;">${r.idInc}</td>
+      <td style="font-size:.7rem;">${r.tipo||"—"}</td>
+      <td style="font-size:.7rem;max-width:200px;word-break:break-word;">${r.desc||"—"}</td>
+      <td style="text-align:center;">
+        <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:.65rem;font-weight:700;
+          background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
+          ${r.severidad||"—"}
+        </span>
+      </td>
+      <td style="font-size:.7rem;white-space:nowrap;">${r.asignado||"—"}</td>
+      <td style="text-align:center;font-size:.7rem;white-space:nowrap;">${r.fechaEnc||"—"}</td>
+      <td style="text-align:center;font-size:.7rem;white-space:nowrap;">${r.fechaAsig||"—"}</td>
+      <td style="text-align:center;font-size:.7rem;white-space:nowrap;">${r.fechaSol||"—"}</td>
+      <td style="text-align:center;font-size:.7rem;white-space:nowrap;">${r.fechaRetest||"—"}</td>
+      <td style="text-align:center;">
+        <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:.65rem;font-weight:700;
+          background:${ec.bg};color:${ec.color};">
+          ${r.estado||"—"}
+        </span>
+      </td>
+      <td style="text-align:center;font-weight:700;color:#8E24AA;">${r.ciclos||"0"}</td>
+      <td style="font-size:.7rem;max-width:160px;word-break:break-word;">${r.comentarios||"—"}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  if(totalPages > 1){
+    pagination.style.display = "flex";
+    document.getElementById("defPageInfo").textContent = `Página ${_defPage} de ${totalPages}`;
+    document.getElementById("defPrevBtn").disabled = _defPage === 1;
+    document.getElementById("defNextBtn").disabled = _defPage === totalPages;
+  } else {
+    pagination.style.display = "none";
+  }
+}
+
+function updateHeaderMeta(){
+  const n = new Date();
+  const ts = n.toLocaleDateString("es-PE",{day:"2-digit",month:"short",year:"numeric"})
+           + " " + n.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
+  document.getElementById("headerMeta").innerHTML =
+    `Última actualización: ${ts}<br>CPs: ${DATA_CP.length} · Ejec: ${DATA_EJEC.length} · Inc: ${DATA_INC.length}`;
+}
+
+document.getElementById("footerTs").textContent = new Date().toLocaleString("es-PE",{
+  day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"
+});
+
+/* ══════════════════════════════════════════════════════
+   BUILD RES MAP — mapea idTest → resultado desde DATA_EJEC
+══════════════════════════════════════════════════════ */
+function buildResMap(ejData){
+  const resMap  = {};
+  const dateMap = {};
+
+  ejData.forEach(e => {
+    const idT = cleanStr(e.idTest);
+    let   res = cleanStr(e.resultado);
+    if(!idT || !res) return;
+
+    /* Normalizar valores alternativos */
+    const resUp = res.toUpperCase();
+    if(resUp==="CORRECTO"||resUp==="OK"||resUp==="APROBADO"||resUp==="PASSED") res="EXITOSO";
+    if(resUp==="INCORRECTO"||resUp==="KO"||resUp==="FAILED")                   res="FALLIDO";
+
+    const idTup = idT.toUpperCase();
+
+    /* Conservar el más reciente si hay duplicados */
+    if(resMap[idTup]){
+      const p        = (e.fecha||"").split("/");
+      const fechaNew = p.length===3 ? new Date(+p[2],+p[1]-1,+p[0]) : null;
+      const fechaOld = dateMap[idTup] || null;
+      if(fechaNew && fechaOld && fechaNew <= fechaOld) return;
+    }
+
+    resMap[idTup]  = res;
+    const p2       = (e.fecha||"").split("/");
+    dateMap[idTup] = p2.length===3 ? new Date(+p2[2],+p2[1]-1,+p2[0]) : null;
+  });
+
+  return resMap;
+}
+
+function getResultado(resMap, idTest){
+  if(!idTest) return "";
+  return resMap[cleanStr(idTest).toUpperCase()] || "";
+}
+
+/* ══════════════════════════════════════════════════════
+   SECCIÓN 1C — BURNDOWN DIARIO
+══════════════════════════════════════════════════════ */
+let _burnChart      = null;
+let _burnRows       = [];
+let _burnPage       = 1;
+const BURN_PAGE_SIZE = 5;
+
+function burnChangePage(dir){
+  const totalPages = Math.ceil(_burnRows.length / BURN_PAGE_SIZE);
+  _burnPage = Math.max(1, Math.min(_burnPage + dir, totalPages));
+  renderBurnTable();
+}
+
+function fmtDateStr(d){
+  return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+}
+
+function parseFecha(raw){
+  if(!raw) return null;
+
+  /* Ya es Date */
+  if(raw instanceof Date) return isNaN(raw) ? null : raw;
+
+  const s = raw.toString().trim();
+
+  /* "Thu Apr 09 2026..." o contiene GMT */
+  if(s.includes("GMT") || /^[A-Z][a-z]{2}\s[A-Z][a-z]{2}/.test(s)){
+    const d = new Date(s); return isNaN(d) ? null : d;
+  }
+
+  /* DD/MM/YYYY */
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){
+    const [d,m,y] = s.split("/"); return new Date(+y,+m-1,+d);
+  }
+
+  /* YYYY-MM-DD */
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(iso) return new Date(+iso[1],+iso[2]-1,+iso[3]);
+
+  /* "6-Abr" | "06-Abr" | "6-Abr-2026" */
+  const MESES = {ene:0,feb:1,mar:2,abr:3,may:4,jun:5,
+                 jul:6,ago:7,sep:8,oct:9,nov:10,dic:11,
+                 jan:0,apr:3,aug:7,dec:11};
+  const m2 = s.match(/^(\d{1,2})[-\/\s]([A-Za-z\u00C0-\u017F]{3,})(?:[-\/\s](\d{2,4}))?$/);
+  if(m2){
+    const mes = MESES[m2[2].toLowerCase().substring(0,3).normalize("NFD").replace(/[\u0300-\u036f]/g,"")];
+    if(mes !== undefined){
+      const y = m2[3] ? (+m2[3] < 100 ? 2000 + +m2[3] : +m2[3]) : new Date().getFullYear();
+      return new Date(y, mes, +m2[1]);
+    }
+  }
+
+  /* fallback */
+  const d = new Date(s); return isNaN(d) ? null : d;
+}
+
+function updateBurndown(cpData, ejData){
+  cpData = cpData || DATA_CP;
+  ejData = ejData || DATA_EJEC;
+
+  const cpIds = new Set(cpData.map(r => cleanStr(r.idTest).toUpperCase()).filter(Boolean));
+
+  /* ── Agrupar por fecha ── */
+  const byDate = {};
+  ejData.forEach(e => {
+    const idT = cleanStr(e.idTest).toUpperCase();
+    if(!idT || !cpIds.has(idT)) return;
+    const fecha = parseFecha(e.fecha);
+    if(!fecha) return;
+    const key = fmtDateStr(fecha);
+    if(!byDate[key]) byDate[key] = { fecha, key, ex:0, fa:0 };
+    const res = cleanStr(e.resultado).toUpperCase();
+    if(res.includes("EXITOSO"))                                byDate[key].ex++;
+    else if(res.includes("FALLIDO")||res.includes("INCIDENCIA")) byDate[key].fa++;
+  });
+
+  /* ── Ordenar y calcular stock acumulado ── */
+  const totalCP = cpIds.size;
+  let acumEx = 0, acumFa = 0;
+
+  _burnRows = Object.values(byDate)
+    .sort((a,b) => a.fecha - b.fecha)
+    .map(d => {
+      acumEx += d.ex;
+      acumFa += d.fa;
+      const stock  = Math.max(0, totalCP - acumEx - acumFa);
+      const pct    = totalCP > 0 ? Math.round((acumEx + acumFa) / totalCP * 100) : 0;
+      return { key: d.key, ex: d.ex, fa: d.fa,
+               entradas: d.ex + d.fa, salidas: d.ex,
+               stock, pct };
+    });
+
+  /* ── KPIs ── */
+  const totEx    = _burnRows.reduce((s,r)=>s+r.ex, 0);
+  const totFa    = _burnRows.reduce((s,r)=>s+r.fa, 0);
+  const stockFin = _burnRows.length ? _burnRows[_burnRows.length-1].stock : totalCP;
+  document.getElementById("burnKpiEx").textContent    = totEx;
+  document.getElementById("burnKpiFa").textContent    = totFa;
+  document.getElementById("burnKpiStock").textContent = stockFin;
+  document.getElementById("burnKpiDias").textContent  = _burnRows.length;
+
+  /* ── Tabla paginada ── */
+  _burnPage = 1;
+  renderBurnTable();
+
+  /* ── Gráfico ── */
+  if(_burnChart){ _burnChart.destroy(); _burnChart = null; }
+  const canvas = document.getElementById("burnChart");
+
+  if(!_burnRows.length){
+    const ctx2 = canvas.getContext("2d");
+    ctx2.clearRect(0,0,canvas.width,canvas.height);
+    ctx2.fillStyle="#aaa"; ctx2.font="13px Segoe UI"; ctx2.textAlign="center";
+    ctx2.fillText("Sin datos de ejecución con fecha registrada", canvas.width/2, 60);
+    return;
+  }
+
+  /* Etiqueta "DD-Mmm" para el eje X */
+  const MESES_ABR = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const labels = _burnRows.map(r => {
+    const p = r.key.split("/");
+    return p.length===3 ? `${p[0]}-${MESES_ABR[+p[1]-1]||p[1]}` : r.key;
+  });
+
+  _burnChart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        { label:"Exitosos",    data: _burnRows.map(r=>r.ex),  backgroundColor:"#43A047", borderRadius:4 },
+        { label:"Incidencias", data: _burnRows.map(r=>-r.fa), backgroundColor:"#EC0000", borderRadius:4 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode:"index", intersect:false },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => {
+          const v = Math.abs(ctx.parsed.y);
+          return ` ${ctx.dataset.label}: ${v}`;
+        }}}
+      },
+      scales: {
+        x: { ticks:{ font:{size:10} }, grid:{ display:false } },
+        y: {
+          title:{ display:true, text:"CPs del día", font:{size:10} },
+          ticks:{ callback: v => Math.abs(v), stepSize:1, precision:0, font:{size:10} },
+          grid:{ color:"#eee" }
+        }
+      }
+    }
+  });
+}
+
+function renderBurnTable(){
+  const tbody = document.getElementById("burnTableBody");
+  const tfoot = document.getElementById("burnTableFoot");
+  const pag   = document.getElementById("burnPagination");
+  tbody.innerHTML = ""; tfoot.innerHTML = "";
+
+  if(!_burnRows.length){
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#aaa;padding:16px;">
+      Sin datos de ejecución con fecha registrada</td></tr>`;
+    pag.style.display = "none";
+    return;
+  }
+
+  const totalPages = Math.ceil(_burnRows.length / BURN_PAGE_SIZE);
+  const start      = (_burnPage - 1) * BURN_PAGE_SIZE;
+  const pageRows   = _burnRows.slice(start, start + BURN_PAGE_SIZE);
+
+  /* fecha de hoy en formato DD/MM/YYYY para comparar */
+  const hoy = new Date();
+  const todayKey = fmtDateStr(hoy);
+
+  pageRows.forEach(r => {
+    const pctC = r.pct>=80?"#43A047":r.pct>=40?"#FB8C00":"#EC0000";
+    const tr   = document.createElement("tr");
+    if(r.key === todayKey) tr.className = "burn-row-today";
+    /* Mostrar fecha como DD-MM-YYYY */
+    const fechaDisplay = r.key.replace(/\//g,"-");
+    tr.innerHTML = `
+      <td style="font-weight:700;white-space:nowrap;">${fechaDisplay}
+        ${r.key===todayKey?' <span style="font-size:.6rem;background:#FDD835;color:#333;padding:1px 5px;border-radius:3px;">HOY</span>':''}
+      </td>
+      <td style="text-align:center;color:#555;">${r.entradas}</td>
+      <td style="text-align:center;font-weight:700;color:#43A047;">${r.ex}</td>
+      <td style="text-align:center;font-weight:700;color:#EC0000;">${r.fa}</td>
+      <td style="text-align:center;color:#555;">${r.salidas}</td>
+      <td style="text-align:center;font-weight:800;color:#1E88E5;">${r.stock}</td>
+      <td>
+        <div class="macro-progress">
+          <div class="macro-progress-track">
+            <div class="macro-progress-fill" style="width:${r.pct}%;background:${pctC};"></div>
+          </div>
+          <span class="macro-pct" style="color:${pctC}">${r.pct}%</span>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  /* Totales siempre en tfoot */
+  const totEx  = _burnRows.reduce((s,r)=>s+r.ex,  0);
+  const totFa  = _burnRows.reduce((s,r)=>s+r.fa,  0);
+  const totEnt = _burnRows.reduce((s,r)=>s+r.entradas, 0);
+  const stockF = _burnRows.length ? _burnRows[_burnRows.length-1].stock : 0;
+  const totPct = totEnt>0 ? Math.round(totEx/totEnt*100) : 0;
+  const totPctC= totPct>=80?"#43A047":totPct>=40?"#FB8C00":"#EC0000";
+  tfoot.innerHTML = `<tr>
+    <td style="font-weight:700;">TOTAL (${_burnRows.length} días)</td>
+    <td style="text-align:center;font-weight:700;">${totEnt}</td>
+    <td style="text-align:center;font-weight:700;color:#43A047;">${totEx}</td>
+    <td style="text-align:center;font-weight:700;color:#EC0000;">${totFa}</td>
+    <td style="text-align:center;font-weight:700;">${totEx}</td>
+    <td style="text-align:center;font-weight:800;color:#1E88E5;">${stockF}</td>
+    <td><div class="macro-progress">
+      <div class="macro-progress-track">
+        <div class="macro-progress-fill" style="width:${totPct}%;background:${totPctC};"></div>
+      </div>
+      <span class="macro-pct" style="color:${totPctC}">${totPct}%</span>
+    </div></td>
+  </tr>`;
+
+  /* Paginación */
+  if(totalPages > 1){
+    pag.style.display = "flex";
+    document.getElementById("burnPageInfo").textContent = `Página ${_burnPage} de ${totalPages}`;
+    document.getElementById("burnPrevBtn").disabled = _burnPage === 1;
+    document.getElementById("burnNextBtn").disabled = _burnPage === totalPages;
+  } else {
+    pag.style.display = "none";
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   HEADER META
+══════════════════════════════════════════════════════ */
+function updateHeaderMeta(){
+  const n = new Date();
+  const ts = n.toLocaleDateString("es-PE",{day:"2-digit",month:"short",year:"numeric"})
+           + " " + n.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
+  document.getElementById("headerMeta").innerHTML =
+    `Última actualización: ${ts}<br>CPs: ${DATA_CP.length} · Ejec: ${DATA_EJEC.length} · Inc: ${DATA_INC.length}`;
+}
+
+document.getElementById("footerTs").textContent = new Date().toLocaleString("es-PE",{
+  day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"
+});
+</script>
+</body>
+</html>

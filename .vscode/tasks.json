@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Fix Dashboard",
+			"type": "shell",
+			"command": "C:/QA/CUTOVER/.venv/Scripts/python.exe C:/QA/CUTOVER/fix_dashboard.py"
+		},
+		{
+			"label": "Git Log",
+			"type": "shell",
+			"command": "git -C C:/QA/CUTOVER log --oneline -5"
+		}
+	]
+}
