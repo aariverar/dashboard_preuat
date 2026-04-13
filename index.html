@@ -263,7 +263,7 @@
             <th style="min-width:220px;">Funcionalidad (N2)</th>
             <th style="text-align:center;min-width:90px;">Casos de Prueba</th>
             <th style="text-align:center;min-width:80px;">Exitosos</th>
-            <th style="text-align:center;min-width:80px;">Fallidos</th>
+            <th style="text-align:center;min-width:80px;">Observados</th>
             <th style="text-align:center;min-width:90px;">Sin Ejecutar</th>
             <th style="text-align:center;min-width:120px;">% Avance</th>
           </tr>
@@ -302,7 +302,7 @@
           <div style="font-size:1.5rem;font-weight:800;color:#43A047;" id="burnKpiEx">—</div>
         </div>
         <div style="background:#fff5f5;border-left:4px solid #EC0000;border-radius:6px;padding:10px 12px;">
-          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#EC0000;margin-bottom:3px;">Total Incidencias</div>
+          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#EC0000;margin-bottom:3px;">Total Observados</div>
           <div style="font-size:1.5rem;font-weight:800;color:#EC0000;" id="burnKpiFa">—</div>
         </div>
         <div style="background:#f0f4ff;border-left:4px solid #1E88E5;border-radius:6px;padding:10px 12px;">
@@ -372,7 +372,7 @@
         <div class="qa-card-sub">sin resultado en ejecución</div>
       </div>
       <div class="qa-card qa-red">
-        <div class="qa-card-label">Incidencias</div>
+        <div class="qa-card-label">Observados</div>
         <div class="qa-card-value" id="pruKpiFallido">—</div>
         <div class="qa-card-sub">resultado = INCIDENCIA</div>
       </div>
@@ -728,7 +728,7 @@ function importExcel(input){
               idInc:      ci(cInc,"id incidencia","id defecto","id inc"),
               idTest:     ci(cInc,"id test","id caso"),                          // ← NUEVO
               idFunc:     ci(cInc,"id funcionalidad","id func","id"),      // ← NUEVO
-              tipo:       ci(cInc,"tipo inicidencia","tipo incidencia","tipo de incidencia","tipo"),
+              tipo:       ci(cInc,"tipo inicidencia","tipo incidencia","tipo"),
               desc:       ci(cInc,"descripcion","descripción","desc"),
               sev:        ci(cInc,"severidad"),
               asignado:   ci(cInc,"asignado a","asignado"),
@@ -1066,6 +1066,9 @@ function updateHierTable(cpData, ejData){
     tbody.appendChild(trN0);
 
     /* ── Filas N1 — por defecto colapsadas ── */
+   
+      
+      
     Object.entries(n1Map).forEach(([n1, n2Map], n1Idx) => {
       let n1CP=0, n1Ex=0, n1Fa=0, n1Sin=0;
       Object.values(n2Map).forEach(({rows}) => {
