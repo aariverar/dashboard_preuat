@@ -384,15 +384,15 @@
     </div>
 
     <!-- ══ SECCIÓN 3: DEFECTOS ══ -->
-    <div class="section-title">Seguimiento de Incidencias</div>
+    <div class="section-title">Seguimiento de Observaciones</div>
     <div class="qa-grid">
       <div class="qa-card qa-red">
-        <div class="qa-card-label">Total Incidencias</div>
+        <div class="qa-card-label">Total Observaciones</div>
         <div class="qa-card-value" id="defKpiTotal">—</div>
-        <div class="qa-card-sub">incidencias registradas</div>
+        <div class="qa-card-sub">Observaciones registradas</div>
       </div>
       <div class="qa-card qa-red">
-        <div class="qa-card-label">Severidad Alta</div>
+        <div class="qa-card-label">Impacto Alto</div>
         <div class="qa-card-value" id="defKpiAlta">—</div>
         <div class="qa-card-sub">requieren atención inmediata</div>
       </div>
@@ -1641,21 +1641,6 @@ function renderBurnTable(){
     pag.style.display = "none";
   }
 }
-
-/* ══════════════════════════════════════════════════════
-   HEADER META
-══════════════════════════════════════════════════════ */
-function updateHeaderMeta(){
-  const n = new Date();
-  const ts = n.toLocaleDateString("es-PE",{day:"2-digit",month:"short",year:"numeric"})
-           + " " + n.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
-  document.getElementById("headerMeta").innerHTML =
-    `Última actualización: ${ts}<br>CPs: ${DATA_CP.length} · Ejec: ${DATA_EJEC.length} · Inc: ${DATA_INC.length}`;
-}
-
-document.getElementById("footerTs").textContent = new Date().toLocaleString("es-PE",{
-  day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"
-});
 </script>
 </body>
 </html>
