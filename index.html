@@ -24,7 +24,7 @@
     .header-info { flex: 1; }
     .header-title { font-size: 1.2rem; font-weight: 700; letter-spacing: .3px; }
     .header-sub   { font-size: .75rem; opacity: .85; }
-    .header-meta  { font-size: .75rem; opacity: .8; text-align: right; line-height: 1.6; }
+    .header-meta  { font-size: .75rem, opacity: .8; text-align: right; line-height: 1.6; }
     .section-title { font-size: 1rem; font-weight: 700; color: var(--san-red-dark); margin-bottom: 10px; margin-top: 24px; border-left: 4px solid var(--san-red); padding-left: 8px; }
     /* ── ELIMINAR ESTAS REGLAS ── */
     /* .filter-bar { ... } */
@@ -296,7 +296,12 @@
       </div>
 
       <!-- KPIs rápidos -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;" id="burnKpiRow">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;" id="burnKpiRow">
+        <div style="background:#f3e5f5;border-left:4px solid #8E24AA;border-radius:6px;padding:10px 12px;">
+          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#8E24AA;margin-bottom:3px;">Stock Ejecutado</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#8E24AA;" id="burnKpiEjec">—</div>
+          <div style="font-size:.6rem;color:#8E24AA;margin-top:2px;">Exitosos + Observados</div>
+        </div>
         <div style="background:#f0faf0;border-left:4px solid #43A047;border-radius:6px;padding:10px 12px;">
           <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#43A047;margin-bottom:3px;">Total Exitosos</div>
           <div style="font-size:1.5rem;font-weight:800;color:#43A047;" id="burnKpiEx">—</div>
@@ -1063,6 +1068,8 @@ function updateHierTable(cpData, ejData){
         </span>
       </td>
       <td style="text-align:center;color:#555;font-size:.72rem;font-weight:600;">${n0Funcs} func.</td>
+
+
       <td style="text-align:center;color:#1E88E5;font-weight:700;">${n0CP}</td>
       <td style="text-align:center;color:#43A047;font-weight:700;">${n0Ex}</td>
       <td style="text-align:center;color:#EC0000;font-weight:700;">${n0Fa}</td>
@@ -1638,116 +1645,22 @@ function updateBurndown(cpData, ejData){
       return { key:d.key, ex:d.ex, fa:d.fa, entradas:d.ex+d.fa, salidas:d.ex, stock, pct };
     });
 
-  const totEx    = _burnRows.reduce((s,r)=>s+r.ex,  0);
-  const totFa    = _burnRows.reduce((s,r)=>s+r.fa,  0);
-  const stockFin = _burnRows.length ? _burnRows[_burnRows.length-1].stock : totalCP;
+  const totEx    = _burnRows.reduce((s,r) => s + r.ex,       0);
+  const totFa    = _burnRows.reduce((s,r) => s + r.fa,       0);
+  const totEnt   = _burnRows.reduce((s,r) => s + r.entradas, 0);
+  const stockF   = _burnRows.length ? _burnRows[_burnRows.length-1].stock : 0;
+  const totPct   = totEnt > 0 ? Math.round(totEx / totEnt * 100) : 0;
+  const totPctC  = totPct>=80?"#43A047":totPct>=40?"#FB8C00":"#EC0000";
+
+  /* ── KPIs rápidos ── */
+  document.getElementById("burnKpiEjec").textContent  = totEx + totFa;
   document.getElementById("burnKpiEx").textContent    = totEx;
   document.getElementById("burnKpiFa").textContent    = totFa;
-  document.getElementById("burnKpiStock").textContent = stockFin;
+  document.getElementById("burnKpiStock").textContent = stockF;
   document.getElementById("burnKpiDias").textContent  = _burnRows.length;
 
-  _burnPage = 1;
-  renderBurnTable();
-
-  if(_burnChart){ _burnChart.destroy(); _burnChart = null; }
-  const canvas = document.getElementById("burnChart");
-
-  if(!_burnRows.length){
-    const ctx2 = canvas.getContext("2d");
-    ctx2.clearRect(0,0,canvas.width,canvas.height);
-    ctx2.fillStyle="#aaa"; ctx2.font="13px Segoe UI"; ctx2.textAlign="center";
-    ctx2.fillText("Sin datos de ejecución con fecha registrada", canvas.width/2, 60);
-    return;
-  }
-
-  const MESES_ABR = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-  const labels = _burnRows.map(r => {
-    const p = r.key.split("/");
-    return p.length===3 ? `${p[0]}-${MESES_ABR[+p[1]-1]||p[1]}` : r.key;
-  });
-
-  _burnChart = new Chart(canvas, {
-    type: "bar",
-    data: {
-      labels,
-      datasets:[
-        { label:"Exitosos",    data:_burnRows.map(r=>r.ex),  backgroundColor:"#43A047", borderRadius:4 },
-        { label:"Incidencias", data:_burnRows.map(r=>-r.fa), backgroundColor:"#EC0000", borderRadius:4 }
-      ]
-    },
-    options:{
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction:{ mode:"index", intersect:false },
-      plugins:{
-        legend:{ display:false },
-        tooltip:{ callbacks:{ label: ctx => {
-          const v = Math.abs(ctx.parsed.y);
-          return ` ${ctx.dataset.label}: ${v}`;
-        }}}
-      },
-      scales:{
-        x:{ ticks:{ font:{size:10} }, grid:{ display:false } },
-        y:{
-          title:{ display:true, text:"CPs del día", font:{size:10} },
-          ticks:{ callback: v => Math.abs(v), stepSize:1, precision:0, font:{size:10} },
-          grid:{ color:"#eee" }
-        }
-      }
-    }
-  });
-}
-
-function renderBurnTable(){
-  const tbody = document.getElementById("burnTableBody");
+  /* ── Tfoot ── */
   const tfoot = document.getElementById("burnTableFoot");
-  const pag   = document.getElementById("burnPagination");
-  tbody.innerHTML = ""; tfoot.innerHTML = "";
-
-  if(!_burnRows.length){
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#aaa;padding:16px;">
-      Sin datos de ejecución con fecha registrada</td></tr>`;
-    pag.style.display = "none";
-    return;
-  }
-
-  const totalPages = Math.ceil(_burnRows.length / BURN_PAGE_SIZE);
-  const start      = (_burnPage - 1) * BURN_PAGE_SIZE;
-  const pageRows   = _burnRows.slice(start, start + BURN_PAGE_SIZE);
-  const hoy        = new Date();
-  const todayKey   = fmtDateStr(hoy);
-
-  pageRows.forEach(r => {
-    const pctC = r.pct>=80?"#43A047":r.pct>=40?"#FB8C00":"#EC0000";
-    const tr   = document.createElement("tr");
-    if(r.key === todayKey) tr.className = "burn-row-today";
-    const fechaDisplay = r.key.replace(/\//g,"-");
-    tr.innerHTML = `
-      <td style="font-weight:700;white-space:nowrap;">${fechaDisplay}
-        ${r.key===todayKey?' <span style="font-size:.6rem;background:#FDD835;color:#333;padding:1px 5px;border-radius:3px;">HOY</span>':''}
-      </td>
-      <td style="text-align:center;color:#555;">${r.entradas}</td>
-      <td style="text-align:center;font-weight:700;color:#43A047;">${r.ex}</td>
-      <td style="text-align:center;font-weight:700;color:#EC0000;">${r.fa}</td>
-      <td style="text-align:center;color:#555;">${r.salidas}</td>
-      <td style="text-align:center;font-weight:800;color:#1E88E5;">${r.stock}</td>
-      <td>
-        <div class="macro-progress">
-          <div class="macro-progress-track">
-            <div class="macro-progress-fill" style="width:${r.pct}%;background:${pctC};"></div>
-          </div>
-          <span class="macro-pct" style="color:${pctC}">${r.pct}%</span>
-        </div>
-      </td>`;
-    tbody.appendChild(tr);
-  });
-
-  const totEx  = _burnRows.reduce((s,r)=>s+r.ex,  0);
-  const totFa  = _burnRows.reduce((s,r)=>s+r.fa,  0);
-  const totEnt = _burnRows.reduce((s,r)=>s+r.entradas, 0);
-  const stockF = _burnRows.length ? _burnRows[_burnRows.length-1].stock : 0;
-  const totPct = totEnt>0 ? Math.round(totEx/totEnt*100) : 0;
-  const totPctC= totPct>=80?"#43A047":totPct>=40?"#FB8C00":"#EC0000";
   tfoot.innerHTML = `<tr>
     <td style="font-weight:700;">TOTAL (${_burnRows.length} días)</td>
     <td style="text-align:center;font-weight:700;">${totEnt}</td>
@@ -1763,6 +1676,50 @@ function renderBurnTable(){
     </div></td>
   </tr>`;
 
+  /* ── Render tabla paginada ── */
+  _burnPage = 1;
+  renderBurnTable();
+
+  /* ── Gráfica burndown ── */
+  renderBurnChart();
+}
+
+function renderBurnTable(){
+  const tbody = document.getElementById("burnTableBody");
+  const pag   = document.getElementById("burnPagination");
+  tbody.innerHTML = "";
+
+  if(_burnRows.length === 0){
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px;">Sin datos de ejecución</td></tr>`;
+    pag.style.display = "none";
+    return;
+  }
+
+  const totalPages = Math.ceil(_burnRows.length / BURN_PAGE_SIZE);
+  const start      = (_burnPage - 1) * BURN_PAGE_SIZE;
+  const pageRows   = _burnRows.slice(start, start + BURN_PAGE_SIZE);
+  const today      = fmtDateStr(new Date());
+
+  pageRows.forEach(r => {
+    const pctC = r.pct>=80?"#43A047":r.pct>=40?"#FB8C00":"#EC0000";
+    const tr   = document.createElement("tr");
+    if(r.key === today) tr.className = "burn-row-today";
+    tr.innerHTML = `
+      <td style="white-space:nowrap;font-weight:${r.key===today?700:400};">${r.key}${r.key===today?" ★":""}</td>
+      <td style="text-align:center;">${r.entradas}</td>
+      <td style="text-align:center;color:#43A047;font-weight:700;">${r.ex}</td>
+      <td style="text-align:center;color:#EC0000;font-weight:700;">${r.fa}</td>
+      <td style="text-align:center;">${r.salidas}</td>
+      <td style="text-align:center;font-weight:800;color:#1E88E5;">${r.stock}</td>
+      <td><div class="macro-progress">
+        <div class="macro-progress-track">
+          <div class="macro-progress-fill" style="width:${r.pct}%;background:${pctC};"></div>
+        </div>
+        <span class="macro-pct" style="color:${pctC}">${r.pct}%</span>
+      </div></td>`;
+    tbody.appendChild(tr);
+  });
+
   if(totalPages > 1){
     pag.style.display = "flex";
     document.getElementById("burnPageInfo").textContent = `Página ${_burnPage} de ${totalPages}`;
@@ -1771,6 +1728,127 @@ function renderBurnTable(){
   } else {
     pag.style.display = "none";
   }
+}
+
+function renderBurnChart(){
+  const labels    = _burnRows.map(r => r.key);
+  const dataEx    = _burnRows.map(r => r.ex);
+  const dataFa    = _burnRows.map(r => -r.fa);
+  const dataStock = _burnRows.map(r => r.stock);
+
+  if(_burnChart){ _burnChart.destroy(); _burnChart = null; }
+  const ctx = document.getElementById("burnChart").getContext("2d");
+
+  if(!labels.length){
+    ctx.clearRect(0,0,600,260);
+    ctx.fillStyle="#aaa"; ctxCat.font="13px Segoe UI"; ctxCat.textAlign="center";
+    ctx.fillText("Sin datos de ejecución", 300, 130);
+    return;
+  }
+
+  /* ── Máximo dinámico del eje de barras (solo CPs del día) ── */
+  const maxBarVal = Math.max(
+    ...dataEx.map(v => Math.abs(v)),
+    ...dataFa.map(v => Math.abs(v)),
+    1
+  );
+  const yBarMax =  Math.ceil(maxBarVal * 1.3);  // 30% de margen arriba
+  const yBarMin = -Math.ceil(maxBarVal * 1.3);  // espejo abajo
+
+  /* ── Máximo dinámico del eje de stock ── */
+  const maxStock = Math.max(...dataStock, 1);
+  const yStockMax = Math.ceil(maxStock * 1.1);
+
+  _burnChart = new Chart(ctx, {
+    data: {
+      labels,
+      datasets:[
+        {
+          type: "bar",
+          label: "Exitosos",
+          data: dataEx,
+          backgroundColor: "#43A047",
+          borderRadius: 3,
+          yAxisID: "yBars"
+        },
+        {
+          type: "bar",
+          label: "Incidencias",
+          data: dataFa,
+          backgroundColor: "#EC0000",
+          borderRadius: 3,
+          yAxisID: "yBars"
+        },
+        {
+          type: "line",
+          label: "Stock Pendiente",
+          data: dataStock,
+          borderColor: "#1E88E5",
+          backgroundColor: "rgba(30,136,229,.08)",
+          tension: .3,
+          fill: true,
+          pointRadius: 3,
+          borderWidth: 2,
+          yAxisID: "yStock"   // ← eje separado
+        }
+      ]
+    },
+    options:{
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode:"index", intersect:false },
+      plugins:{
+        legend:{ display: false },
+        tooltip:{
+          callbacks:{
+            label: ctx => {
+              const v = Math.abs(ctx.parsed.y);
+              return ` ${ctx.dataset.label}: ${v}`;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          ticks:{ font:{size:9}, maxRotation:45 },
+          grid:{ color:"#eee" }
+        },
+        yBars:{
+          type: "linear",
+          position: "left",
+          min: yBarMin,
+          max: yBarMax,
+          title:{
+            display: true,
+            text: "CPs del día",
+            font:{ size:10 }
+          },
+          ticks:{
+            font:{ size:10 },
+            stepSize: Math.max(1, Math.ceil(maxBarVal / 5)),
+            callback: v => Math.abs(v)   // mostrar siempre positivo
+          },
+          grid:{ color:"#eee" }
+        },
+        yStock:{
+          type: "linear",
+          position: "right",
+          min: 0,
+          max: yStockMax,
+          title:{
+            display: true,
+            text: "Stock acumulado",
+            font:{ size:10 }
+          },
+          ticks:{
+            font:{ size:10 },
+            stepSize: Math.max(1, Math.ceil(maxStock / 5))
+          },
+          grid:{ drawOnChartArea: false }  // no dibujar grid del eje derecho
+        }
+      }
+    }
+  });
 }
 
 /* ══════════════════════════════════════════════════════
