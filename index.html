@@ -430,17 +430,13 @@
         <thead>
           <tr>
             <th style="min-width:120px;">ID Incidencia</th>
-            <th style="min-width:110px;">Tipo Incidencia</th>
+            <th style="min-width:110px;">Propuesta</th>
+            <th style="min-width:110px;">Categoría</th>
             <th style="min-width:200px;">Descripción</th>
-            <th style="text-align:center;min-width:90px;">Severidad</th>
             <th style="min-width:120px;">Asignado A</th>
             <th style="text-align:center;min-width:100px;">F. Encontrado</th>
-            <th style="text-align:center;min-width:100px;">F. Asignado</th>
-            <th style="text-align:center;min-width:100px;">F. Solución</th>
-            <th style="text-align:center;min-width:110px;">F. Retest/Cierre</th>
             <th style="text-align:center;min-width:100px;">Estado</th>
             <th style="text-align:center;min-width:80px;">Ciclos Reap.</th>
-            <th style="min-width:160px;">Comentarios</th>
           </tr>
         </thead>
         <tbody id="defTableBody"></tbody>
@@ -450,6 +446,29 @@
         <span id="defPageInfo"></span>
         <button id="defNextBtn" onclick="defChangePage(1)">Siguiente &#8594;</button>
       </div>
+    </div>
+
+    <!-- ══ GRÁFICOS OBSERVACIONES ══ -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+
+      <!-- Gráfico por Categoría -->
+      <div class="qa-panel">
+        <div style="font-size:.85rem;font-weight:700;color:#333;margin-bottom:4px;">Distribución por Categoría</div>
+        <div style="font-size:.72rem;color:var(--san-gray-600);margin-bottom:12px;">Cantidad y % de observaciones por categoría</div>
+        <div style="position:relative;height:240px;">
+          <canvas id="defChartCategoria"></canvas>
+        </div>
+      </div>
+
+      <!-- Gráfico por Asignado A -->
+      <div class="qa-panel">
+        <div style="font-size:.85rem;font-weight:700;color:#333;margin-bottom:4px;">Distribución por Responsable</div>
+        <div style="font-size:.72rem;color:var(--san-gray-600);margin-bottom:12px;">Cantidad de observaciones por persona asignada</div>
+        <div style="position:relative;height:240px;">
+          <canvas id="defChartAsignado"></canvas>
+        </div>
+      </div>
+
     </div>
 
   </div><!-- /#mainContent -->
@@ -726,9 +745,10 @@ function importExcel(input){
 
             const incC={
               idInc:      ci(cInc,"id incidencia","id defecto","id inc"),
-              idTest:     ci(cInc,"id test","id caso"),                          // ← NUEVO
-              idFunc:     ci(cInc,"id funcionalidad","id func","id"),      // ← NUEVO
-              tipo:       ci(cInc,"tipo inicidencia","tipo incidencia","tipo"),
+              idTest:     ci(cInc,"id test","id caso"),
+              idFunc:     ci(cInc,"id funcionalidad","id func","id"),
+              propuesta:  ci(cInc,"propuesta"),
+              categoria:  ci(cInc,"categoria","categoría"),
               desc:       ci(cInc,"descripcion","descripción","desc"),
               sev:        ci(cInc,"severidad"),
               asignado:   ci(cInc,"asignado a","asignado"),
@@ -747,9 +767,10 @@ function importExcel(input){
               if(!idI) continue;
               DATA_INC.push({
                 idInc:       idI,
-                idTest:      g(r, incC.idTest),      // ← NUEVO
-                idFunc:      g(r, incC.idFunc),      // ← NUEVO
-                tipo:        g(r, incC.tipo),
+                idTest:      g(r, incC.idTest),
+                idFunc:      g(r, incC.idFunc),
+                propuesta:   g(r, incC.propuesta),
+                categoria:   g(r, incC.categoria),
                 desc:        g(r, incC.desc),
                 severidad:   g(r, incC.sev),
                 asignado:    g(r, incC.asignado),
@@ -1066,9 +1087,6 @@ function updateHierTable(cpData, ejData){
     tbody.appendChild(trN0);
 
     /* ── Filas N1 — por defecto colapsadas ── */
-   
-      
-      
     Object.entries(n1Map).forEach(([n1, n2Map], n1Idx) => {
       let n1CP=0, n1Ex=0, n1Fa=0, n1Sin=0;
       Object.values(n2Map).forEach(({rows}) => {
@@ -1247,29 +1265,8 @@ function updateSec3(incData){
   _defRows = incData;
   _defPage = 1;
   renderDefTable();
+  renderDefCharts(incData);   // ← AGREGAR
 }
-
-/* ══════════════════════════════════════════════════════
-   DATOS DE PRUEBA
-══════════════════════════════════════════════════════ */
-let _defRows     = [];
-let _defPage     = 1;
-const DEF_PAGE_SIZE = 5;
-
-const SEV_COLOR = sev => {
-  const s = (sev||"").toUpperCase();
-  if(s.includes("ALT")||s.includes("CRITI")) return {bg:"#ffebee",color:"#C62828",border:"#ef9a9a"};
-  if(s.includes("MED"))                       return {bg:"#fff3e0",color:"#E65100",border:"#ffcc80"};
-  if(s.includes("BAJ"))                       return {bg:"#e8f5e9",color:"#2E7D32",border:"#a5d6a7"};
-  return {bg:"#f5f5f5",color:"#555",border:"#ddd"};
-};
-const EST_COLOR = est => {
-  const e = (est||"").toUpperCase();
-  if(e.includes("CERRAD")||e.includes("RESUEL")||e.includes("CLOSE")) return {bg:"#e8f5e9",color:"#2E7D32"};
-  if(e.includes("PROG")||e.includes("ASIGN"))                          return {bg:"#fff3e0",color:"#E65100"};
-  if(e.includes("ABIERT")||e.includes("NUEVO")||e.includes("OPEN"))   return {bg:"#ffebee",color:"#C62828"};
-  return {bg:"#f5f5f5",color:"#555"};
-};
 
 function defFiltrar(){
   const fEst = document.getElementById("defFiltroEstado").value.toLowerCase();
@@ -1281,6 +1278,7 @@ function defFiltrar(){
   });
   _defPage = 1;
   renderDefTable();
+  renderDefCharts(_defRows);  // ← AGREGAR
 }
 
 function defChangePage(dir){
@@ -1295,7 +1293,7 @@ function renderDefTable(){
   tbody.innerHTML  = "";
 
   if(_defRows.length === 0){
-    tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:#aaa;padding:20px;">Sin defectos registrados</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px;">Sin observaciones registradas</td></tr>`;
     pagination.style.display = "none";
     return;
   }
@@ -1305,32 +1303,22 @@ function renderDefTable(){
   const pageRows   = _defRows.slice(start, start + DEF_PAGE_SIZE);
 
   pageRows.forEach(r => {
-    const sc = SEV_COLOR(r.severidad);
     const ec = EST_COLOR(r.estado);
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td style="font-weight:700;white-space:nowrap;color:#1E88E5;">${r.idInc}</td>
-      <td style="font-size:.7rem;">${r.tipo||"—"}</td>
+      <td style="font-size:.7rem;">${r.propuesta||"—"}</td>
+      <td style="font-size:.7rem;">${r.categoria||"—"}</td>
       <td style="font-size:.7rem;max-width:200px;word-break:break-word;">${r.desc||"—"}</td>
-      <td style="text-align:center;">
-        <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:.65rem;font-weight:700;
-          background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};">
-          ${r.severidad||"—"}
-        </span>
-      </td>
       <td style="font-size:.7rem;white-space:nowrap;">${r.asignado||"—"}</td>
       <td style="text-align:center;font-size:.7rem;white-space:nowrap;">${r.fechaEnc||"—"}</td>
-      <td style="text-align:center;font-size:.7rem;white-space:nowrap;">${r.fechaAsig||"—"}</td>
-      <td style="text-align:center;font-size:.7rem;white-space:nowrap;">${r.fechaSol||"—"}</td>
-      <td style="text-align:center;font-size:.7rem;white-space:nowrap;">${r.fechaRetest||"—"}</td>
       <td style="text-align:center;">
         <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:.65rem;font-weight:700;
           background:${ec.bg};color:${ec.color};">
           ${r.estado||"—"}
         </span>
       </td>
-      <td style="text-align:center;font-weight:700;color:#8E24AA;">${r.ciclos||"0"}</td>
-      <td style="font-size:.7rem;max-width:160px;word-break:break-word;">${r.comentarios||"—"}</td>`;
+      <td style="text-align:center;font-weight:700;color:#8E24AA;">${r.ciclos||"0"}</td>`;
     tbody.appendChild(tr);
   });
 
@@ -1344,50 +1332,198 @@ function renderDefTable(){
   }
 }
 
-function updateHeaderMeta(){
-  const n = new Date();
-  const ts = n.toLocaleDateString("es-PE",{day:"2-digit",month:"short",year:"numeric"})
-           + " " + n.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
-  document.getElementById("headerMeta").innerHTML =
-    `Última actualización: ${ts}<br>CPs: ${DATA_CP.length} · Ejec: ${DATA_EJEC.length} · Inc: ${DATA_INC.length}`;
+let _defChartCat  = null;
+let _defChartAsig = null;
+
+function renderDefCharts(incData){
+  incData = incData || _defRows;
+
+  const PALETA = [
+    "#1E88E5","#43A047","#EC0000","#FB8C00","#8E24AA",
+    "#00897B","#F4511E","#3949AB","#E91E63","#6D4C41"
+  ];
+
+  /* ══ GRÁFICO 1 — por Categoría (Doughnut) ══ */
+  const catMap = {};
+  incData.forEach(r => {
+    const c = cleanStr(r.categoria) || "(Sin categoría)";
+    catMap[c] = (catMap[c] || 0) + 1;
+  });
+  const catLabels = Object.keys(catMap).sort((a,b) => catMap[b] - catMap[a]);
+  const catData   = catLabels.map(l => catMap[l]);
+  const total     = catData.reduce((s,v) => s+v, 0);
+
+  if(_defChartCat){ _defChartCat.destroy(); _defChartCat = null; }
+  const ctxCat = document.getElementById("defChartCategoria").getContext("2d");
+
+  if(catLabels.length === 0){
+    ctxCat.clearRect(0,0,300,240);
+    ctxCat.fillStyle="#aaa"; ctxCat.font="13px Segoe UI"; ctxCat.textAlign="center";
+    ctxCat.fillText("Sin datos", 150, 120);
+  } else {
+    _defChartCat = new Chart(ctxCat, {
+      type: "doughnut",
+      data: {
+        labels: catLabels,
+        datasets:[{
+          data: catData,
+          backgroundColor: catLabels.map((_,i) => PALETA[i % PALETA.length]),
+          borderWidth: 2,
+          borderColor: "#fff"
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "right",
+            labels: {
+              font:{ size:10 },
+              boxWidth: 12,
+              padding: 8,
+              /* ← Mostrar etiqueta + cantidad + % siempre visible */
+              generateLabels: chart => {
+                const ds   = chart.data.datasets[0];
+                const tot  = ds.data.reduce((s,v)=>s+v,0);
+                return chart.data.labels.map((label, i) => {
+                  const val = ds.data[i];
+                  const pct = tot > 0 ? Math.round(val / tot * 100) : 0;
+                  return {
+                    text:         `${label}: ${val} (${pct}%)`,
+                    fillStyle:    ds.backgroundColor[i],
+                    strokeStyle:  "#fff",
+                    lineWidth:    1,
+                    index:        i,
+                    hidden:       false
+                  };
+                });
+              }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v   = ctx.parsed;
+                const pct = total > 0 ? Math.round(v / total * 100) : 0;
+                return ` ${ctx.label}: ${v} (${pct}%)`;
+              }
+            }
+          },
+          /* ── Plugin inline para texto en el centro del donut ── */
+          doughnutLabel: {
+            total
+          }
+        },
+        cutout: "55%"
+      },
+      plugins: [{
+        id: "doughnutLabel",
+        afterDraw(chart){
+          const { ctx, chartArea:{ top, bottom, left, right } } = chart;
+          const cx = (left + right)  / 2;
+          const cy = (top  + bottom) / 2;
+          const tot = chart.config.options.plugins.doughnutLabel.total;
+          ctx.save();
+          ctx.textAlign    = "center";
+          ctx.textBaseline = "middle";
+          ctx.font         = "bold 18px Segoe UI";
+          ctx.fillStyle    = "#333";
+          ctx.fillText(tot, cx, cy - 8);
+          ctx.font      = "11px Segoe UI";
+          ctx.fillStyle = "#888";
+          ctx.fillText("total", cx, cy + 10);
+          ctx.restore();
+        }
+      }]
+    });
+  }
+
+  /* ══ GRÁFICO 2 — por Asignado A (Barras horizontales) ══ */
+  const asigMap = {};
+  incData.forEach(r => {
+    const a = cleanStr(r.asignado) || "(Sin asignar)";
+    asigMap[a] = (asigMap[a] || 0) + 1;
+  });
+  const asigEntries = Object.entries(asigMap).sort((a,b) => b[1] - a[1]);
+  const asigLabels  = asigEntries.map(e => e[0]);
+  const asigData    = asigEntries.map(e => e[1]);
+
+  if(_defChartAsig){ _defChartAsig.destroy(); _defChartAsig = null; }
+  const ctxAsig = document.getElementById("defChartAsignado").getContext("2d");
+
+  if(asigLabels.length === 0){
+    ctxAsig.clearRect(0,0,300,240);
+    ctxAsig.fillStyle="#aaa"; ctxAsig.font="13px Segoe UI"; ctxAsig.textAlign="center";
+    ctxAsig.fillText("Sin datos", 150, 120);
+  } else {
+    _defChartAsig = new Chart(ctxAsig, {
+      type: "bar",
+      data: {
+        labels: asigLabels,
+        datasets:[{
+          label: "Observaciones",
+          data: asigData,
+          backgroundColor: asigLabels.map((_,i) => PALETA[i % PALETA.length]),
+          borderRadius: 4,
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: "y",   // ← barras horizontales
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v   = ctx.parsed.x;
+                const pct = total > 0 ? Math.round(v / total * 100) : 0;
+                return ` ${v} observaciones (${pct}%)`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { stepSize:1, precision:0, font:{size:10} },
+            grid:  { color:"#eee" }
+          },
+          y: {
+            ticks: { font:{size:10} },
+            grid:  { display:false }
+          }
+        }
+      }
+    });
+  }
 }
 
-document.getElementById("footerTs").textContent = new Date().toLocaleString("es-PE",{
-  day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"
-});
-
 /* ══════════════════════════════════════════════════════
-   BUILD RES MAP — mapea idTest → resultado desde DATA_EJEC
+   BUILD RES MAP
 ══════════════════════════════════════════════════════ */
 function buildResMap(ejData){
   const resMap  = {};
   const dateMap = {};
-
   ejData.forEach(e => {
     const idT = cleanStr(e.idTest);
-    let   res = cleanStr(e.resultado);
-    if(!idT || !res) return;
-
-    /* Normalizar valores alternativos */
+    if(!idT) return;
+    let res = cleanStr(e.resultado);
     const resUp = res.toUpperCase();
     if(resUp==="CORRECTO"||resUp==="OK"||resUp==="APROBADO"||resUp==="PASSED") res="EXITOSO";
     if(resUp==="INCORRECTO"||resUp==="KO"||resUp==="FAILED")                   res="FALLIDO";
-
     const idTup = idT.toUpperCase();
-
-    /* Conservar el más reciente si hay duplicados */
     if(resMap[idTup]){
-      const p        = (e.fecha||"").split("/");
+      const p       = (e.fecha||"").split("/");
       const fechaNew = p.length===3 ? new Date(+p[2],+p[1]-1,+p[0]) : null;
       const fechaOld = dateMap[idTup] || null;
       if(fechaNew && fechaOld && fechaNew <= fechaOld) return;
     }
-
     resMap[idTup]  = res;
     const p2       = (e.fecha||"").split("/");
     dateMap[idTup] = p2.length===3 ? new Date(+p2[2],+p2[1]-1,+p2[0]) : null;
   });
-
   return resMap;
 }
 
@@ -1397,7 +1533,67 @@ function getResultado(resMap, idTest){
 }
 
 /* ══════════════════════════════════════════════════════
-   SECCIÓN 1C — BURNDOWN DIARIO
+   COLORES ESTADO / SEVERIDAD
+══════════════════════════════════════════════════════ */
+const SEV_COLOR = sev => {
+  const s = (sev||"").toUpperCase();
+  if(s.includes("ALT")||s.includes("CRITI")||s.includes("BLOQ")) return {bg:"#ffebee",color:"#C62828",border:"#ef9a9a"};
+  if(s.includes("MED"))  return {bg:"#fff3e0",color:"#E65100",border:"#ffcc80"};
+  if(s.includes("BAJ"))  return {bg:"#e8f5e9",color:"#2E7D32",border:"#a5d6a7"};
+  return {bg:"#f5f5f5",color:"#555",border:"#ddd"};
+};
+const EST_COLOR = est => {
+  const e = (est||"").toUpperCase();
+  if(e.includes("CERRAD")||e.includes("RESUEL")||e.includes("CLOSE")) return {bg:"#e8f5e9",color:"#2E7D32"};
+  if(e.includes("PROG")||e.includes("ASIGN"))                         return {bg:"#fff3e0",color:"#E65100"};
+  if(e.includes("ABIERT")||e.includes("NUEVO")||e.includes("OPEN"))  return {bg:"#ffebee",color:"#C62828"};
+  return {bg:"#f5f5f5",color:"#555"};
+};
+
+/* ══════════════════════════════════════════════════════
+   PAGINACIÓN DEFECTOS
+══════════════════════════════════════════════════════ */
+let _defRows    = [];
+let _defPage    = 1;
+const DEF_PAGE_SIZE = 5;
+
+/* ══════════════════════════════════════════════════════
+   BURNDOWN — helpers de fecha
+══════════════════════════════════════════════════════ */
+function fmtDateStr(d){
+  return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+}
+
+function parseFecha(raw){
+  if(!raw) return null;
+  if(raw instanceof Date) return isNaN(raw) ? null : raw;
+  const s = raw.toString().trim();
+  if(s.includes("GMT") || /^[A-Z][a-z]{2}\s[A-Z][a-z]{2}/.test(s)){
+    const d = new Date(s); return isNaN(d) ? null : d;
+  }
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){
+    const parts = s.split("/");
+    return new Date(+parts[2], +parts[1]-1, +parts[0]);
+  }
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(iso) return new Date(+iso[1], +iso[2]-1, +iso[3]);
+  const MESES = {ene:0,feb:1,mar:2,abr:3,may:4,jun:5,
+                 jul:6,ago:7,sep:8,oct:9,nov:10,dic:11,
+                 jan:0,apr:3,aug:7,dec:11};
+  const m2 = s.match(/^(\d{1,2})[-\/\s]([A-Za-z\u00C0-\u017F]{3,})(?:[-\/\s](\d{2,4}))?$/);
+  if(m2){
+    const mes = MESES[m2[2].toLowerCase().substring(0,3).normalize("NFD").replace(/[\u0300-\u036f]/g,"")];
+    if(mes !== undefined){
+      const yr = m2[3] ? (+m2[3]<100 ? 2000 + +m2[3] : +m2[3]) : new Date().getFullYear();
+      return new Date(yr, mes, +m2[1]);
+    }
+  }
+  const fallback = new Date(s);
+  return isNaN(fallback) ? null : fallback;
+}
+
+/* ══════════════════════════════════════════════════════
+   BURNDOWN DIARIO
 ══════════════════════════════════════════════════════ */
 let _burnChart      = null;
 let _burnRows       = [];
@@ -1410,55 +1606,12 @@ function burnChangePage(dir){
   renderBurnTable();
 }
 
-function fmtDateStr(d){
-  return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
-}
-
-function parseFecha(raw){
-  if(!raw) return null;
-  if(raw instanceof Date) return isNaN(raw) ? null : raw;
-
-  const s = raw.toString().trim();
-
-  /* "Thu Apr 09 2026..." o contiene GMT */
-  if(s.includes("GMT") || /^[A-Z][a-z]{2}\s[A-Z][a-z]{2}/.test(s)){
-    const d = new Date(s); return isNaN(d) ? null : d;
-  }
-
-  /* DD/MM/YYYY */
-  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){
-    const parts = s.split("/");
-    return new Date(+parts[2], +parts[1]-1, +parts[0]);  // ← sin desestructuración
-  }
-
-  /* YYYY-MM-DD */
-  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if(iso) return new Date(+iso[1], +iso[2]-1, +iso[3]);
-
-  /* "6-Abr" | "06-Abr" | "6-Abr-2026" */
-  const MESES = {ene:0,feb:1,mar:2,abr:3,may:4,jun:5,
-                 jul:6,ago:7,sep:8,oct:9,nov:10,dic:11,
-                 jan:0,apr:3,aug:7,dec:11};
-  const m2 = s.match(/^(\d{1,2})[-\/\s]([A-Za-z\u00C0-\u017F]{3,})(?:[-\/\s](\d{2,4}))?$/);
-  if(m2){
-    const mes = MESES[m2[2].toLowerCase().substring(0,3).normalize("NFD").replace(/[\u0300-\u036f]/g,"")];
-    if(mes !== undefined){
-      const yr = m2[3] ? (+m2[3] < 100 ? 2000 + +m2[3] : +m2[3]) : new Date().getFullYear();
-      return new Date(yr, mes, +m2[1]);
-    }
-  }
-
-  const fallback = new Date(s);
-  return isNaN(fallback) ? null : fallback;
-}
-
 function updateBurndown(cpData, ejData){
   cpData = cpData || DATA_CP;
   ejData = ejData || DATA_EJEC;
 
   const cpIds = new Set(cpData.map(r => cleanStr(r.idTest).toUpperCase()).filter(Boolean));
 
-  /* ── Agrupar por fecha ── */
   const byDate = {};
   ejData.forEach(e => {
     const idT = cleanStr(e.idTest).toUpperCase();
@@ -1472,7 +1625,6 @@ function updateBurndown(cpData, ejData){
     else if(res.includes("FALLIDO")||res.includes("INCIDENCIA")) byDate[key].fa++;
   });
 
-  /* ── Ordenar y calcular stock acumulado ── */
   const totalCP = cpIds.size;
   let acumEx = 0, acumFa = 0;
 
@@ -1481,27 +1633,22 @@ function updateBurndown(cpData, ejData){
     .map(d => {
       acumEx += d.ex;
       acumFa += d.fa;
-      const stock  = Math.max(0, totalCP - acumEx - acumFa);
-      const pct    = totalCP > 0 ? Math.round((acumEx + acumFa) / totalCP * 100) : 0;
-      return { key: d.key, ex: d.ex, fa: d.fa,
-               entradas: d.ex + d.fa, salidas: d.ex,
-               stock, pct };
+      const stock = Math.max(0, totalCP - acumEx - acumFa);
+      const pct   = totalCP > 0 ? Math.round((acumEx + acumFa) / totalCP * 100) : 0;
+      return { key:d.key, ex:d.ex, fa:d.fa, entradas:d.ex+d.fa, salidas:d.ex, stock, pct };
     });
 
-  /* ── KPIs ── */
-  const totEx    = _burnRows.reduce((s,r)=>s+r.ex, 0);
-  const totFa    = _burnRows.reduce((s,r)=>s+r.fa, 0);
+  const totEx    = _burnRows.reduce((s,r)=>s+r.ex,  0);
+  const totFa    = _burnRows.reduce((s,r)=>s+r.fa,  0);
   const stockFin = _burnRows.length ? _burnRows[_burnRows.length-1].stock : totalCP;
   document.getElementById("burnKpiEx").textContent    = totEx;
   document.getElementById("burnKpiFa").textContent    = totFa;
   document.getElementById("burnKpiStock").textContent = stockFin;
   document.getElementById("burnKpiDias").textContent  = _burnRows.length;
 
-  /* ── Tabla paginada ── */
   _burnPage = 1;
   renderBurnTable();
 
-  /* ── Gráfico ── */
   if(_burnChart){ _burnChart.destroy(); _burnChart = null; }
   const canvas = document.getElementById("burnChart");
 
@@ -1513,7 +1660,6 @@ function updateBurndown(cpData, ejData){
     return;
   }
 
-  /* Etiqueta "DD-Mmm" para el eje X */
   const MESES_ABR = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
   const labels = _burnRows.map(r => {
     const p = r.key.split("/");
@@ -1524,38 +1670,28 @@ function updateBurndown(cpData, ejData){
     type: "bar",
     data: {
       labels,
-      datasets: [
-        { label:"Exitosos",    data: _burnRows.map(r=>r.ex),  backgroundColor:"#43A047", borderRadius:4 },
-        { label:"Incidencias", data: _burnRows.map(r=>-r.fa), backgroundColor:"#EC0000", borderRadius:4 },
-        {
-          label:"Stock Pendiente", data: _burnRows.map(r=>r.stock),
-          type:"line", borderColor:"#1E88E5", backgroundColor:"rgba(30,136,229,.1)",
-          fill:true, tension:.3, pointRadius:3, borderWidth:2, yAxisID:"y2"
-        }
+      datasets:[
+        { label:"Exitosos",    data:_burnRows.map(r=>r.ex),  backgroundColor:"#43A047", borderRadius:4 },
+        { label:"Incidencias", data:_burnRows.map(r=>-r.fa), backgroundColor:"#EC0000", borderRadius:4 }
       ]
     },
-    options: {
+    options:{
       responsive: true,
       maintainAspectRatio: false,
-      interaction: { mode:"index", intersect:false },
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: ctx => {
+      interaction:{ mode:"index", intersect:false },
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{ label: ctx => {
           const v = Math.abs(ctx.parsed.y);
-          return `${ctx.dataset.label}: ${v}`;
+          return ` ${ctx.dataset.label}: ${v}`;
         }}}
       },
-      scales: {
-        x: { stacked:false, grid:{ color:"#eee" }, ticks:{ font:{size:10} } },
-        y: {
-          stacked:false,
+      scales:{
+        x:{ ticks:{ font:{size:10} }, grid:{ display:false } },
+        y:{
           title:{ display:true, text:"CPs del día", font:{size:10} },
           ticks:{ callback: v => Math.abs(v), stepSize:1, precision:0, font:{size:10} },
           grid:{ color:"#eee" }
-        },
-        y2: {
-          position:"right",
-          display:false
         }
       }
     }
@@ -1578,16 +1714,13 @@ function renderBurnTable(){
   const totalPages = Math.ceil(_burnRows.length / BURN_PAGE_SIZE);
   const start      = (_burnPage - 1) * BURN_PAGE_SIZE;
   const pageRows   = _burnRows.slice(start, start + BURN_PAGE_SIZE);
-
-  /* fecha de hoy en formato DD/MM/YYYY para comparar */
-  const hoy = new Date();
-  const todayKey = fmtDateStr(hoy);
+  const hoy        = new Date();
+  const todayKey   = fmtDateStr(hoy);
 
   pageRows.forEach(r => {
     const pctC = r.pct>=80?"#43A047":r.pct>=40?"#FB8C00":"#EC0000";
     const tr   = document.createElement("tr");
     if(r.key === todayKey) tr.className = "burn-row-today";
-    /* Mostrar fecha como DD-MM-YYYY */
     const fechaDisplay = r.key.replace(/\//g,"-");
     tr.innerHTML = `
       <td style="font-weight:700;white-space:nowrap;">${fechaDisplay}
@@ -1609,7 +1742,6 @@ function renderBurnTable(){
     tbody.appendChild(tr);
   });
 
-  /* Totales siempre en tfoot */
   const totEx  = _burnRows.reduce((s,r)=>s+r.ex,  0);
   const totFa  = _burnRows.reduce((s,r)=>s+r.fa,  0);
   const totEnt = _burnRows.reduce((s,r)=>s+r.entradas, 0);
@@ -1631,7 +1763,6 @@ function renderBurnTable(){
     </div></td>
   </tr>`;
 
-  /* Paginación */
   if(totalPages > 1){
     pag.style.display = "flex";
     document.getElementById("burnPageInfo").textContent = `Página ${_burnPage} de ${totalPages}`;
@@ -1641,6 +1772,25 @@ function renderBurnTable(){
     pag.style.display = "none";
   }
 }
+
+/* ══════════════════════════════════════════════════════
+   HEADER META
+══════════════════════════════════════════════════════ */
+function updateHeaderMeta(){
+  const n = new Date();
+  const ts = n.toLocaleDateString("es-PE",{day:"2-digit",month:"short",year:"numeric"})
+           + " " + n.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
+  document.getElementById("headerMeta").innerHTML =
+    `Última actualización: ${ts}<br>CPs: ${DATA_CP.length} · Ejec: ${DATA_EJEC.length} · Inc: ${DATA_INC.length}`;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("footerTs").textContent = new Date().toLocaleString("es-PE",{
+    day:"2-digit", month:"2-digit", year:"numeric",
+    hour:"2-digit", minute:"2-digit"
+  });
+});
+
 </script>
 </body>
 </html>
