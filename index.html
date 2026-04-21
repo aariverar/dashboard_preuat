@@ -157,6 +157,34 @@
     #burnChart { display:block; width:100% !important; }
     .burn-row-today td { background:#fffde7 !important; font-weight:700; }
 
+    /* ── KPIs Observaciones ── */
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--san-white);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.07);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .kpi-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--san-gray-900);
+      margin-bottom: 4px;
+    }
+    .kpi-label {
+      font-size: .75rem;
+      color: var(--san-gray-600);
+      text-align: center;
+    }
   </style>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <!-- Chart.js eliminado — gráficos con Canvas puro, sin dependencias -->
@@ -398,26 +426,26 @@
 
     <!-- ══ SECCIÓN 3: DEFECTOS ══ -->
     <div class="section-title">Seguimiento de Observaciones</div>
-    <div class="qa-grid">
-      <div class="qa-card qa-red">
-        <div class="qa-card-label">Total Observaciones</div>
-        <div class="qa-card-value" id="defKpiTotal">—</div>
-        <div class="qa-card-sub">Observaciones registradas</div>
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-value" id="defKpiTotal">—</div>
+        <div class="kpi-label">Total Observaciones</div>
       </div>
-      <div class="qa-card qa-red">
-        <div class="qa-card-label">Impacto Alto</div>
-        <div class="qa-card-value" id="defKpiAlta">—</div>
-        <div class="qa-card-sub">requieren atención inmediata</div>
+      <div class="kpi-card" style="border-left:4px solid #EC0000;">
+        <div class="kpi-value" style="color:#EC0000;" id="defKpiAbiertas">—</div>
+        <div class="kpi-label">Abiertas</div>
       </div>
-      <div class="qa-card qa-orange">
-        <div class="qa-card-label">En Progreso</div>
-        <div class="qa-card-value" id="defKpiProgreso">—</div>
-        <div class="qa-card-sub">siendo atendidos</div>
+      <div class="kpi-card" style="border-left:4px solid #1E88E5;">
+        <div class="kpi-value" style="color:#1E88E5;" id="defKpiRetesting">—</div>
+        <div class="kpi-label">En Retesting</div>
       </div>
-      <div class="qa-card qa-green">
-        <div class="qa-card-label">Resueltos / Cerrados</div>
-        <div class="qa-card-value" id="defKpiResueltos">—</div>
-        <div class="qa-card-sub">corregidos y verificados</div>
+      <div class="kpi-card" style="border-left:4px solid #43A047;">
+        <div class="kpi-value" style="color:#43A047;" id="defKpiResueltos">—</div>
+        <div class="kpi-label">Resueltas / Cerradas</div>
+      </div>
+      <div class="kpi-card" style="border-left:4px solid #9E9E9E;">
+        <div class="kpi-value" style="color:#9E9E9E;" id="defKpiDesestimadas">—</div>
+        <div class="kpi-label">Desestimadas</div>
       </div>
     </div>
 
@@ -1135,13 +1163,28 @@ function renderBurnChart(){
   canvas.onmousemove = ev => {
     const rect = canvas.getBoundingClientRect();
     const mx   = ev.clientX - rect.left;
-    const gw   = pw / n;
-    const idx  = Math.floor((mx - ml) / gw);
-    const newH = (idx >= 0 && idx < n) ? idx : -1;
-    if(newH !== hovIdx){ hovIdx = newH; draw(); }
-    canvas.style.cursor = newH >= 0 ? "crosshair" : "default";
+    const my   = ev.clientY - rect.top;
+    const dx   = mx-cx, dy = my-cy;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    let newHov = -1;
+
+    if(dist > R*0.54 && dist < R+12){
+      let a = Math.atan2(dy, dx);
+      if(a < -Math.PI/2) a += Math.PI*2;
+      segments.forEach((seg, i) => {
+        let s = seg.start < -Math.PI/2 ? seg.start+Math.PI*2 : seg.start;
+        if(a >= s && a < s+seg.sweep) newHov = i;
+      });
+    }
+    const lineH = Math.min(24, (H-20)/Math.max(labels.length,1));
+    labels.forEach((_,i) => {
+      const ly = 14+i*lineH;
+      if(mx >= legendX+6 && mx <= W-4 && my >= ly-lineH/2 && my <= ly+lineH/2) newHov = i;
+    });
+    if(newHov !== hovered){ hovered=newHov; draw(); }
+    canvas.style.cursor = newHov >= 0 ? "pointer" : "default";
   };
-  canvas.onmouseleave = () => { hovIdx = -1; draw(); canvas.style.cursor="default"; };
+  canvas.onmouseleave = () => { hovered=-1; draw(); canvas.style.cursor="default"; };
 }
 
 function _rrect(ctx, x, y, w, h, r){
@@ -1318,7 +1361,7 @@ function updateHierTable(cpData, ejData){
     n0Map[n0k].n1s[n1k].n2s[n2k].rows.push(r);
   });
 
-  let n0Idx=0;
+  let n0Idx = 0;
   Object.entries(n0Map).forEach(([n0k,{name:n0Name,n1s:n1Map}])=>{
     n0Idx++;
     const color = MACRO_COLORS[Object.keys(MACRO_COLORS).find(k=>norm(k)===n0k)]||"#9E9E9E";
@@ -1566,10 +1609,27 @@ function updateSec2(cpData, ejData){
 ══════════════════════════════════════════════════════ */
 function updateSec3(incData){
   incData=incData||DATA_INC;
-  document.getElementById("defKpiTotal").textContent    = incData.length;
-  document.getElementById("defKpiAlta").textContent     = incData.filter(r=>SEV_COLOR(r.severidad).color==="#C62828").length;
-  document.getElementById("defKpiProgreso").textContent = incData.filter(r=>{const e=(r.estado||"").toUpperCase();return e.includes("PROG")||e.includes("ASIGN");}).length;
-  document.getElementById("defKpiResueltos").textContent= incData.filter(r=>{const e=(r.estado||"").toUpperCase();return e.includes("CERRAD")||e.includes("RESUEL")||e.includes("CLOSE");}).length;
+  document.getElementById("defKpiTotal").textContent=incData.length;
+
+  document.getElementById("defKpiAbiertas").textContent=incData.filter(r=>{
+    const e=(r.estado||"").toUpperCase();
+    return e.includes("ABIERTO")||e.includes("NUEVO")||e.includes("OPEN")||e.includes("PENDIENTE");
+  }).length;
+
+  document.getElementById("defKpiRetesting").textContent=incData.filter(r=>{
+    const e=(r.estado||"").toUpperCase();
+    return e.includes("RETEST")||e.includes("RE-TEST")||e.includes("EN PRUEBA")||e.includes("VERIFICACI");
+  }).length;
+
+  document.getElementById("defKpiResueltos").textContent=incData.filter(r=>{
+    const e=(r.estado||"").toUpperCase();
+    return e.includes("CERRAD")||e.includes("RESUEL")||e.includes("CLOSE")||e.includes("CORREG");
+  }).length;
+
+  document.getElementById("defKpiDesestimadas").textContent=incData.filter(r=>{
+    const e=(r.estado||"").toUpperCase();
+    return e.includes("DESESTIM")||e.includes("RECHAZ")||e.includes("CANCELA")||e.includes("NO APLICA")||e.includes("DESCART");
+  }).length;
 
   const selEst=document.getElementById("defFiltroEstado");
   const selSev=document.getElementById("defFiltroSev");
@@ -1587,16 +1647,18 @@ function updateSec3(incData){
 }
 
 function defFiltrar(){
-  const fEst=document.getElementById("defFiltroEstado").value.toLowerCase();
-  const fSev=document.getElementById("defFiltroSev").value.toLowerCase();
-  const fCat=document.getElementById("defFiltroCat").value.toLowerCase();
-  _defRows=DATA_INC.filter(r=>{
-    const okEst=!fEst||(r.estado   ||"").toLowerCase().includes(fEst);
-    const okSev=!fSev||(r.severidad||"").toLowerCase().includes(fSev);
-    const okCat=!fCat||(r.categoria||"").toLowerCase().includes(fCat);
-    return okEst&&okSev&&okCat;
+  const fEst = document.getElementById("defFiltroEstado").value;
+  const fSev = document.getElementById("defFiltroSev").value;
+  const fCat = document.getElementById("defFiltroCat").value;
+  _defRows = DATA_INC.filter(r=>{
+    const okEst = !fEst || (r.estado    ||"").toLowerCase() === fEst;
+    const okSev = !fSev || (r.severidad ||"").toLowerCase() === fSev;
+    const okCat = !fCat || (r.categoria ||"").toLowerCase() === fCat;
+    return okEst && okSev && okCat;
   });
-  _defPage=1; renderDefTable(); renderDefCharts(_defRows);
+  _defPage = 1;
+  renderDefTable();
+  renderDefCharts(_defRows);
 }
 
 function defChangePage(dir){
@@ -1606,12 +1668,12 @@ function defChangePage(dir){
 }
 
 function renderDefTable(){
-  const tbody=document.getElementById("defTableBody");
-  const pag  =document.getElementById("defPagination");
-  tbody.innerHTML="";
+  const tbody = document.getElementById("defTableBody");
+  const pag   = document.getElementById("defPagination");
+  tbody.innerHTML = "";
   if(!_defRows.length){
-    tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;color:#aaa;padding:20px;">Sin observaciones registradas</td></tr>`;
-    pag.style.display="none"; return;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#aaa;padding:20px;">Sin observaciones registradas</td></tr>`;
+    pag.style.display = "none"; return;
   }
   const totalPages=Math.ceil(_defRows.length/DEF_PAGE_SIZE);
   _defRows.slice((_defPage-1)*DEF_PAGE_SIZE,_defPage*DEF_PAGE_SIZE).forEach(r=>{
@@ -1670,13 +1732,14 @@ function renderDefCharts(incData){
 /* ── Doughnut interactivo ── */
 function _drawDoughnut(canvas, labels, data, colors, total){
   const parent = canvas.parentElement;
-  const W = parent.offsetWidth  || 400;
-  const H = parent.offsetHeight || 240;
+  const W = parent.clientWidth  || 400;
+  const H = parent.clientHeight || 240;
   canvas.width  = W * devicePixelRatio;
   canvas.height = H * devicePixelRatio;
   canvas.style.width  = W + "px";
   canvas.style.height = H + "px";
   const ctx = canvas.getContext("2d");
+  ctx.setTransform(1,0,0,1,0,0);       /* ← reset acumulación de escala */
   ctx.scale(devicePixelRatio, devicePixelRatio);
 
   const legendX = Math.floor(W * 0.50);
@@ -1789,7 +1852,7 @@ function _drawDoughnut(canvas, labels, data, colors, total){
       if(mx >= legendX+6 && mx <= W-4 && my >= ly-lineH/2 && my <= ly+lineH/2) newHov = i;
     });
     if(newHov !== hovered){ hovered=newHov; draw(); }
-    canvas.style.cursor = newHov >= 0 ? "pointer" : "default";
+    canvas.style.cursor = newHov>=0 ? "pointer" : "default";
   };
   canvas.onmouseleave = () => { hovered=-1; draw(); canvas.style.cursor="default"; };
 }
@@ -1797,13 +1860,14 @@ function _drawDoughnut(canvas, labels, data, colors, total){
 /* ── Barras horizontales interactivas ── */
 function _drawHBar(canvas, labels, data, colors, totalObs){
   const parent = canvas.parentElement;
-  const W = parent.offsetWidth  || 400;
-  const H = parent.offsetHeight || 240;
+  const W = parent.clientWidth  || 400;
+  const H = parent.clientHeight || 240;
   canvas.width  = W * devicePixelRatio;
   canvas.height = H * devicePixelRatio;
-  canvas.style.width  = W+"px";
-  canvas.style.height = H+"px";
+  canvas.style.width  = W + "px";
+  canvas.style.height = H + "px";
   const ctx = canvas.getContext("2d");
+  ctx.setTransform(1,0,0,1,0,0);       /* ← reset acumulación de escala */
   ctx.scale(devicePixelRatio, devicePixelRatio);
 
   const ml=Math.min(130,Math.floor(W*.35)), mr=60, mt=10, mb=18;
