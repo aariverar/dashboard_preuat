@@ -24,7 +24,7 @@
     .header-info { flex: 1; }
     .header-title { font-size: 1.2rem; font-weight: 700; letter-spacing: .3px; }
     .header-sub   { font-size: .75rem; opacity: .85; }
-    .header-meta  { font-size: .75rem; opacity: .8; text-align: right; line-height: 1.6; }
+    .header-meta  { font-size: .75rem, opacity: .8; text-align: right; line-height: 1.6; }
     .section-title { font-size: 1rem; font-weight: 700; color: var(--san-red-dark); margin-bottom: 10px; margin-top: 24px; border-left: 4px solid var(--san-red); padding-left: 8px; }
     /* ── ELIMINAR ESTAS REGLAS ── */
     /* .filter-bar { ... } */
@@ -1163,28 +1163,13 @@ function renderBurnChart(){
   canvas.onmousemove = ev => {
     const rect = canvas.getBoundingClientRect();
     const mx   = ev.clientX - rect.left;
-    const my   = ev.clientY - rect.top;
-    const dx   = mx-cx, dy = my-cy;
-    const dist = Math.sqrt(dx*dx+dy*dy);
-    let newHov = -1;
-
-    if(dist > R*0.54 && dist < R+12){
-      let a = Math.atan2(dy, dx);
-      if(a < -Math.PI/2) a += Math.PI*2;
-      segments.forEach((seg, i) => {
-        let s = seg.start < -Math.PI/2 ? seg.start+Math.PI*2 : seg.start;
-        if(a >= s && a < s+seg.sweep) newHov = i;
-      });
-    }
-    const lineH = Math.min(24, (H-20)/Math.max(labels.length,1));
-    labels.forEach((_,i) => {
-      const ly = 14+i*lineH;
-      if(mx >= legendX+6 && mx <= W-4 && my >= ly-lineH/2 && my <= ly+lineH/2) newHov = i;
-    });
-    if(newHov !== hovered){ hovered=newHov; draw(); }
-    canvas.style.cursor = newHov >= 0 ? "pointer" : "default";
+    const gw   = pw / n;
+    const idx  = Math.floor((mx - ml) / gw);
+    const newH = (idx >= 0 && idx < n) ? idx : -1;
+    if(newH !== hovIdx){ hovIdx = newH; draw(); }
+    canvas.style.cursor = newH >= 0 ? "crosshair" : "default";
   };
-  canvas.onmouseleave = () => { hovered=-1; draw(); canvas.style.cursor="default"; };
+  canvas.onmouseleave = () => { hovIdx = -1; draw(); canvas.style.cursor = "default"; };
 }
 
 function _rrect(ctx, x, y, w, h, r){
