@@ -24,7 +24,7 @@
     .header-info { flex: 1; }
     .header-title { font-size: 1.2rem; font-weight: 700; letter-spacing: .3px; }
     .header-sub   { font-size: .75rem; opacity: .85; }
-    .header-meta  { font-size: .75rem, opacity: .8; text-align: right; line-height: 1.6; }
+    .header-meta  { font-size: .75rem; opacity: .8; text-align: right; line-height: 1.6; }
     .section-title { font-size: 1rem; font-weight: 700; color: var(--san-red-dark); margin-bottom: 10px; margin-top: 24px; border-left: 4px solid var(--san-red); padding-left: 8px; }
     /* ── ELIMINAR ESTAS REGLAS ── */
     /* .filter-bar { ... } */
@@ -1269,7 +1269,7 @@ function updateMacroTable(cpData, ejData){
     tr.innerHTML=``
       +`<td style="font-size:.75rem;color:#aaa;">${idx+1}</td>`
       +`<td><div class="macro-badge">`
-        +`<svg class="macro-dot" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="${color}"/></svg>`
+        +`<img src="favicon.ico" class="macro-dot" style="width:16px;height:16px;object-fit:contain;flex-shrink:0;"/>`
         +`<span style="font-size:.8rem;font-weight:700;color:#222;">${macro}</span>`
       +`</div></td>`
       +`<td style="text-align:center;font-size:.75rem;">1</td>`
@@ -1334,7 +1334,10 @@ function updateHierTable(cpData, ejData){
     const trN0=document.createElement("tr"); trN0.className="hier-n0-row"; trN0.onclick=()=>toggleHier(n0Id);
     trN0.innerHTML=`
       <td colspan="3"><span class="hier-toggle closed" id="tog-${n0Id}">▼</span>
-        <span class="hier-n0-badge"><svg class="hier-n0-dot" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="${color}"/></svg>${n0Name}</span></td>
+        <span class="hier-n0-badge">
+          <img src="favicon.ico" class="hier-n0-dot" style="width:14px;height:14px;object-fit:contain;flex-shrink:0;"/>
+          ${n0Name}
+        </span></td>
       <td style="text-align:center;">${n0CP}</td>
       <td style="text-align:center;color:#43A047;font-weight:700;">${n0Ex}</td>
       <td style="text-align:center;color:#EC0000;font-weight:700;">${n0Fa}</td>
