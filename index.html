@@ -159,7 +159,7 @@
 
   </style>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <!-- Chart.js eliminado — gráficos con Canvas puro, sin dependencias -->
 </head>
 <body>
 
@@ -287,6 +287,9 @@
             <span style="display:inline-block;width:12px;height:12px;background:#43A047;border-radius:2px;"></span> Exitosos (↑)
           </div>
           <div style="display:flex;align-items:center;gap:5px;font-size:.72rem;font-weight:700;">
+            <span style="display:inline-block;width:12px;height:12px;background:#F9A825;border-radius:2px;"></span> Exitosos con Obs. (↑)
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:.72rem;font-weight:700;">
             <span style="display:inline-block;width:12px;height:12px;background:#EC0000;border-radius:2px;"></span> Incidencias (↓)
           </div>
           <div style="display:flex;align-items:center;gap:5px;font-size:.72rem;font-weight:700;">
@@ -296,7 +299,7 @@
       </div>
 
       <!-- KPIs rápidos -->
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;" id="burnKpiRow">
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px;" id="burnKpiRow">
         <div style="background:#f3e5f5;border-left:4px solid #8E24AA;border-radius:6px;padding:10px 12px;">
           <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#8E24AA;margin-bottom:3px;">Stock Ejecutado</div>
           <div style="font-size:1.5rem;font-weight:800;color:#8E24AA;" id="burnKpiEjec">—</div>
@@ -305,6 +308,11 @@
         <div style="background:#f0faf0;border-left:4px solid #43A047;border-radius:6px;padding:10px 12px;">
           <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#43A047;margin-bottom:3px;">Total Exitosos</div>
           <div style="font-size:1.5rem;font-weight:800;color:#43A047;" id="burnKpiEx">—</div>
+        </div>
+        <div style="background:#fffde7;border-left:4px solid #F9A825;border-radius:6px;padding:10px 12px;">
+          <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#F9A825;margin-bottom:3px;">Exitosos con Obs.</div>
+          <div style="font-size:1.5rem;font-weight:800;color:#F9A825;" id="burnKpiExObs">—</div>
+          <div style="font-size:.6rem;color:#F9A825;margin-top:2px;">Exitoso con Observación</div>
         </div>
         <div style="background:#fff5f5;border-left:4px solid #EC0000;border-radius:6px;padding:10px 12px;">
           <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#EC0000;margin-bottom:3px;">Total Observados</div>
@@ -322,8 +330,8 @@
 
       <!-- Gráfica -->
       <div style="position:relative;width:100%;overflow-x:auto;">
-        <div id="burnChartWrap" style="min-width:600px;position:relative;max-height:260px;">
-          <canvas id="burnChart" style="max-height:260px;"></canvas>
+        <div id="burnChartWrap" style="min-width:600px;position:relative;height:280px;">
+          <canvas id="burnChart" style="height:280px;width:100%;"></canvas>
         </div>
       </div>
 
@@ -429,19 +437,23 @@
           <select id="defFiltroSev" onchange="defFiltrar()" style="font-size:.72rem;padding:4px 8px;border:1.5px solid #ddd;border-radius:5px;">
             <option value="">— Severidad —</option>
           </select>
+          <select id="defFiltroCat" onchange="defFiltrar()" style="font-size:.72rem;padding:4px 8px;border:1.5px solid #ddd;border-radius:5px;">
+            <option value="">— Categoría —</option>
+          </select>
         </div>
       </div>
       <table class="qa-owner-table" id="defTable">
         <thead>
           <tr>
-            <th style="min-width:120px;">ID Incidencia</th>
-            <th style="min-width:110px;">Propuesta</th>
-            <th style="min-width:110px;">Categoría</th>
-            <th style="min-width:200px;">Descripción</th>
-            <th style="min-width:120px;">Asignado A</th>
-            <th style="text-align:center;min-width:100px;">F. Encontrado</th>
-            <th style="text-align:center;min-width:100px;">Estado</th>
-            <th style="text-align:center;min-width:80px;">Ciclos Reap.</th>
+            <th style="width:90px;">ID</th>
+            <th style="width:80px;">Propuesta</th>
+            <th style="width:90px;">Categoría</th>
+            <th style="min-width:240px;">Descripción</th>
+            <th style="width:90px;">Asignado A</th>
+            <th style="width:80px;text-align:center;">F. Enc.</th>
+            <th style="width:80px;text-align:center;">F. Diag.</th>
+            <th style="width:80px;text-align:center;">F. Resuelto</th>
+            <th style="width:90px;text-align:center;">Estado</th>
           </tr>
         </thead>
         <tbody id="defTableBody"></tbody>
@@ -495,7 +507,27 @@ let DATA_CP   = [];
 let DATA_EJEC = [];
 let DATA_INC  = [];
 let _currentFuncLevel = "n0";
-let _activeApp = "";   // ← aplicación seleccionada, "" = todas
+let _activeApp = "";
+
+/* ══════════════════════════════════════════════════════
+   UTILIDADES UI
+══════════════════════════════════════════════════════ */
+function showLoader(pct, msg){
+  document.getElementById("loadingOverlay").classList.add("active");
+  document.getElementById("loaderBar").style.width = (pct||0)+"%";
+  if(msg) document.getElementById("loaderSub").textContent = msg;
+}
+function hideLoader(){
+  document.getElementById("loadingOverlay").classList.remove("active");
+  document.getElementById("loaderBar").style.width = "0%";
+}
+function showToast(msg, type){
+  const t = document.getElementById("importToast");
+  t.textContent = msg;
+  t.className = "show " + (type||"");
+  clearTimeout(t._tid);
+  t._tid = setTimeout(()=>{ t.className=""; }, 4000);
+}
 
 /* ── Limpieza profunda de strings del Excel ── */
 const cleanStr = s => {
@@ -533,21 +565,76 @@ const MACRO_COLORS = {
 };
 
 /* ══════════════════════════════════════════════════════
-   LOADER / TOAST
+   PALETA COLORES GRÁFICOS
 ══════════════════════════════════════════════════════ */
-function showLoader(pct, sub){
-  document.getElementById("loadingOverlay").classList.add("active");
-  document.getElementById("loaderBar").style.width = pct + "%";
-  if(sub) document.getElementById("loaderSub").textContent = sub;
+const PALETA = [
+  "#1E88E5","#43A047","#EC0000","#FB8C00","#8E24AA",
+  "#00897B","#F4511E","#3949AB","#E91E63","#6D4C41"
+];
+
+/* ══════════════════════════════════════════════════════
+   HEADER META
+══════════════════════════════════════════════════════ */
+function updateHeaderMeta(){
+  const el = document.getElementById("headerMeta");
+  const fs = document.getElementById("footerSource");
+  const now = new Date().toLocaleString("es-PE",{
+    day:"2-digit", month:"2-digit", year:"numeric",
+    hour:"2-digit", minute:"2-digit"
+  });
+  const txt = `CP: ${DATA_CP.length} | Ejec: ${DATA_EJEC.length} | Obs: ${DATA_INC.length}`;
+  if(el) el.innerHTML = `${txt}<br><span style="font-size:.68rem;opacity:.8;">Actualizado: ${now}</span>`;
+  if(fs) fs.textContent = `${txt} · Cargado: ${now}`;
 }
-function hideLoader(){
-  document.getElementById("loadingOverlay").classList.remove("active");
-  document.getElementById("loaderBar").style.width = "0%";
+
+/* ══════════════════════════════════════════════════════
+   BUILD RES MAP — índice resultado por idTest+idFunc
+══════════════════════════════════════════════════════ */
+function buildResMap(ejData){
+  const map = {};
+  (ejData || DATA_EJEC).forEach(e => {
+    const idT = cleanStr(e.idTest).toUpperCase();
+    const idF = cleanStr(e.idFunc).toUpperCase();
+    const res = cleanStr(e.resultado);
+    if(idT) map[idT]            = res;
+    if(idF) map[idF]            = res;
+    if(idT && idF) map[`${idT}||${idF}`] = res;
+  });
+  return map;
 }
-function showToast(msg, type){
-  const t = document.getElementById("importToast");
-  t.textContent = msg; t.className = "show " + (type||"");
-  clearTimeout(t._timer); t._timer = setTimeout(()=>{ t.className=""; }, 5000);
+
+function getResultado(resMap, idTest, idFunc){
+  const idT = cleanStr(idTest).toUpperCase();
+  const idF = cleanStr(idFunc).toUpperCase();
+  return resMap[`${idT}||${idF}`]
+      || resMap[idT]
+      || resMap[idF]
+      || "";
+}
+
+/* ══════════════════════════════════════════════════════
+   COLORES SEVERIDAD Y ESTADO
+══════════════════════════════════════════════════════ */
+function SEV_COLOR(sev){
+  const s = (sev||"").toUpperCase();
+  if(s.includes("ALTA") || s.includes("CRÍT") || s.includes("CRIT") || s === "1")
+    return { bg:"#FFEBEE", color:"#C62828" };
+  if(s.includes("MEDIA") || s === "2")
+    return { bg:"#FFF3E0", color:"#E65100" };
+  if(s.includes("BAJA") || s === "3")
+    return { bg:"#FFFDE7", color:"#F57F17" };
+  return { bg:"#F5F5F5", color:"#757575" };
+}
+
+function EST_COLOR(est){
+  const s = (est||"").toUpperCase();
+  if(s.includes("CERRAD") || s.includes("RESUEL") || s.includes("CLOSE"))
+    return { bg:"#E8F5E9", color:"#2E7D32" };
+  if(s.includes("PROG") || s.includes("ASIGN"))
+    return { bg:"#FFF3E0", color:"#E65100" };
+  if(s.includes("ABIERTO") || s.includes("NUEVO") || s.includes("OPEN"))
+    return { bg:"#FFEBEE", color:"#C62828" };
+  return { bg:"#F5F5F5", color:"#757575" };
 }
 
 /* ══════════════════════════════════════════════════════
@@ -663,1005 +750,774 @@ function importExcel(input){
               resultado: ci(cEj,
                             "estado ejecuci",   // ← PRIMERO: "ESTADO EJECUCIÓN"
                             "estado ejecución",
-                            "estado ejecucion",
-                            "resultado obtenido", // ← fallback
-                            "resultado"           // ← último recurso
+                            "resultado"
                           ),
-              /* ── DIA EJECUTADO / FECHA ── */
-              fecha:     ci(cEj,
-                            "dia ejecutado",     // ← tu columna real
-                            "día ejecutado",
-                            "fecha ejecuci",
-                            "fecha de ejecuci",
-                            "fecha"
-                          ),
-              usrNeg:    ci(cEj,"usuario negocio","usuario de negocio"),
-              respTI:    ci(cEj,"responsable ti","responsable de ti"),
-              usrPlat:   ci(cEj,"usuario plataforma","usuario plat","ejecutor","ejecutado por"),
-              evidencia: ci(cEj,"evidencia"),
-              obs:       ci(cEj,"resultado obtenido","observaci")
+              fecha:     ci(cEj,"fecha ejecutado","fecha"),
+              dia:       ci(cEj,"dia ejecutado","dia"),
+              mes:       ci(cEj,"mes ejecutado","mes"),
+              anio:      ci(cEj,"anio ejecutado","año"),
+              canal:     ci(cEj,"canal impactado","canal"),
+              app:       ci(cEj,"aplicacion","aplicación","aplicaci","app","sistema","aplicativo"),
+              owner:     ci(cEj,"owner"),
+              respQA:    ci(cEj,"responsable qa","responsable de qa")
             };
 
-            console.warn("🔍 Mapeo Matriz Ejecución:", {
-              idTest:    ejC.idTest    >=0?`✅ col[${ejC.idTest}]="${cEj[ejC.idTest]}"`    :"❌ NO ENCONTRADO",
-              idFunc:    ejC.idFunc    >=0?`✅ col[${ejC.idFunc}]="${cEj[ejC.idFunc]}"`    :"❌ NO ENCONTRADO",
-              resultado: ejC.resultado >=0?`✅ col[${ejC.resultado}]="${cEj[ejC.resultado]}"`:"❌ NO ENCONTRADO",
-              fecha:     ejC.fecha     >=0?`✅ col[${ejC.fecha}]="${cEj[ejC.fecha]}"`      :"❌ NO ENCONTRADO",
-            });
+            if(ejC.idTest<0){ hideLoader(); showToast("❌ Columna 'ID TEST' no encontrada en Matriz Ejecución","error"); return; }
+            if(ejC.resultado<0){ hideLoader(); showToast("❌ Columna 'RESULTADO' no encontrada en Matriz Ejecución","error"); return; }
 
-            DATA_EJEC=[];
             for(let i=hEj+1;i<rawEj.length;i++){
               const r=rawEj[i];
-              const idT=g(r,ejC.idTest);
-              if(!idT) continue;
-
-              let res = g(r, ejC.resultado);
-              const resUp = res.toUpperCase();
-              if(resUp==="CORRECTO"||resUp==="OK"||resUp==="APROBADO"||resUp==="PASSED") res="EXITOSO";
-              if(resUp==="INCORRECTO"||resUp==="KO"||resUp==="FAILED")                   res="FALLIDO";
-
-              /* ── Normalizar fecha sea Date, texto "6-Abr", "DD/MM/YYYY", ISO, etc. ── */
-              const rawFecha = ejC.fecha >= 0 ? r[ejC.fecha] : null;
-              let fechaNorm = "";
-              if(rawFecha){
-                if(rawFecha instanceof Date){
-                  /* Objeto Date real del Excel → DD/MM/YYYY */
-                  const dd = String(rawFecha.getDate()).padStart(2,"0");
-                  const mm = String(rawFecha.getMonth()+1).padStart(2,"0");
-                  const yy = rawFecha.getFullYear();
-                  fechaNorm = `${dd}/${mm}/${yy}`;
-                } else {
-                  /* Texto: "6-Abr", "06/04/2026", "2026-04-06", etc. → normFecha lo resuelve */
-                  fechaNorm = rawFecha.toString().trim();
-                }
-              }
-
               DATA_EJEC.push({
-                idEjec:    g(r, ejC.idEjec),
-                idTest:    idT,
-                idFunc:    g(r, ejC.idFunc),
-                resultado: res,
-                fecha:     fechaNorm,   // ← ya normalizado
-                usrNeg:    g(r, ejC.usrNeg),
-                respTI:    g(r, ejC.respTI),
-                usrPlat:   g(r, ejC.usrPlat),
-                evidencia: g(r, ejC.evidencia),
-                obs:       g(r, ejC.obs)
+                idTest:   g(r,ejC.idTest),
+                idFunc:   g(r,ejC.idFunc),
+                resultado: g(r,ejC.resultado),
+                fecha:    gd(r,ejC.fecha),
+                dia:      g(r,ejC.dia),
+                mes:      g(r,ejC.mes),
+                anio:     g(r,ejC.anio),
+                canal:    g(r,ejC.canal),
+                app:      g(r,ejC.app),
+                owner:    g(r,ejC.owner),
+                respQA:   g(r,ejC.respQA)
               });
             }
 
             console.log(`✅ DATA_EJEC cargado: ${DATA_EJEC.length} filas`);
             console.table(DATA_EJEC.slice(0,5));
           }
+        } else {
+          console.warn("⚠️ No se encontró hoja de Ejecución. Hojas disponibles:", wb.SheetNames);
         }
 
         /* ── Matriz Incidencias ── */
         showLoader(88,"Procesando Matriz de Incidencias…");
-        const shInc=findSheet("incidencia")||findSheet("matrizinc");
-        DATA_INC=[];
+
+        /* ── 1. Buscar hoja: exacta primero, luego keyword ── */
+        const shInc = wb.SheetNames.find(n => n.trim().toLowerCase() === "matriz de incidencias")
+                   || wb.SheetNames.find(n => n.trim().toLowerCase() === "matriz incidencias")
+                   || wb.SheetNames.find(n => n.replace(/\s+/g,"").toLowerCase().includes("incidencia"))
+                   || wb.SheetNames.find(n => n.replace(/\s+/g,"").toLowerCase().includes("observ"))
+                   || wb.SheetNames.find(n => n.replace(/\s+/g,"").toLowerCase().includes("defecto"));
+
+        console.warn("📋 Todas las hojas:", wb.SheetNames);
+        console.warn("✅ Hoja Incidencias seleccionada:", shInc);
+
+        DATA_INC = [];
         if(shInc){
-          const rawInc=XLSX.utils.sheet_to_json(wb.Sheets[shInc],{header:1,defval:""});
-          const hInc=findHdr(rawInc,["id incidencia","id defecto","tipo incidencia","tipo inicidencia"]);
-          if(hInc>=0){
-            const cInc=buildCols(rawInc[hInc]);
+          const rawInc = XLSX.utils.sheet_to_json(wb.Sheets[shInc],{header:1,defval:""});
 
-            console.log("🗂️ Headers Matriz Incidencias:", cInc);
-            console.table(cInc.map((h,i)=>({col:i,header:h})));
+          console.warn("📄 Total filas en hoja:", rawInc.length);
+          console.warn("📄 Fila 0:", rawInc[0]);
+          console.warn("📄 Fila 1:", rawInc[1]);
+          console.warn("📄 Fila 2:", rawInc[2]);
 
-            const incC={
-              idInc:      ci(cInc,"id incidencia","id defecto","id inc"),
-              idTest:     ci(cInc,"id test","id caso"),
-              idFunc:     ci(cInc,"id funcionalidad","id func","id"),
-              propuesta:  ci(cInc,"propuesta"),
-              categoria:  ci(cInc,"categoria","categoría"),
-              desc:       ci(cInc,"descripcion","descripción","desc"),
-              sev:        ci(cInc,"severidad"),
-              asignado:   ci(cInc,"asignado a","asignado"),
-              fechaEnc:   ci(cInc,"fecha encontrado","fecha enc","fecha hallado"),
-              fechaAsig:  ci(cInc,"fecha asignado","fecha asig"),
-              fechaSol:   ci(cInc,"fecha solucion","fecha solución","fecha sol"),
-              fechaRetest:ci(cInc,"fecha de retest","fecha retest","fecha cierre","fecha de retest/cierre"),
-              estado:     ci(cInc,"estado defecto","estado"),
-              ciclos:     ci(cInc,"ciclos reapertura","ciclos reap","ciclos"),
-              comentarios:ci(cInc,"comentarios","observaci","obs")
-            };
-
-            for(let i=hInc+1;i<rawInc.length;i++){
-              const r=rawInc[i];
-              const idI=g(r,incC.idInc);
-              if(!idI) continue;
-              DATA_INC.push({
-                idInc:       idI,
-                idTest:      g(r, incC.idTest),
-                idFunc:      g(r, incC.idFunc),
-                propuesta:   g(r, incC.propuesta),
-                categoria:   g(r, incC.categoria),
-                desc:        g(r, incC.desc),
-                severidad:   g(r, incC.sev),
-                asignado:    g(r, incC.asignado),
-                fechaEnc:    gd(r, incC.fechaEnc),
-                fechaAsig:   gd(r, incC.fechaAsig),
-                fechaSol:    gd(r, incC.fechaSol),
-                fechaRetest: gd(r, incC.fechaRetest),
-                estado:      g(r, incC.estado),
-                ciclos:      g(r, incC.ciclos),
-                comentarios: g(r, incC.comentarios)
-              });
-            }
-
-            console.log(`✅ DATA_INC cargado: ${DATA_INC.length} filas`);
-            console.table(DATA_INC.slice(0,5));
+          /* ── 2. Buscar fila de encabezado (primeras 10 filas) ── */
+          let hRow = -1;
+          for(let i=0; i<Math.min(rawInc.length,10); i++){
+            const row = rawInc[i];
+            if(!row) continue;
+            const joined = row.map(c=>(c||"").toString().toLowerCase()).join("|");
+            /* Acepta cualquier fila que tenga al menos 2 palabras clave típicas */
+            const hits = ["id","estado","severidad","categoria","descripcion","descripción",
+                          "asignado","fecha","observacion","observación","incidencia","defecto",
+                          "propuesta","responsable"].filter(k => joined.includes(k));
+            if(hits.length >= 2){ hRow = i; break; }
           }
+          if(hRow < 0) hRow = 0; /* fallback: primera fila */
+
+          console.warn("📍 Fila encabezado usada:", hRow, "→", rawInc[hRow]);
+
+          const cInc = buildCols(rawInc[hRow]);
+          console.table(cInc.map((h,i)=>({col:i, header:h})));
+
+          /* ── 3. Mapeo flexible de columnas ── */
+          const incC = {
+            idInc:      ci(cInc,
+                            "id incidencia","id defecto","id observacion","id observación",
+                            "id inc","nro incidencia","n° incidencia","numero incidencia",
+                            "cod incidencia","codigo","código","id"
+                          ),
+            idTest:     ci(cInc,"id test","id caso de prueba","id caso","idtest"),
+            idFunc:     ci(cInc,"id funcionalidad","id func","idfunc"),
+            propuesta:  ci(cInc,"propuesta","propuesta de mejora","mejora"),
+            categoria:  ci(cInc,
+                            "categoria","categoría","tipo incidencia","tipo inicidencia",
+                            "tipo observacion","tipo observación","tipo defecto","tipo","clasificacion","clasificación"
+                          ),
+            desc:       ci(cInc,
+                            "descripcion del defecto","descripcion de la observacion","descripcion de observacion",
+                            "descripción","descripcion","detalle","observacion","observación",
+                            "hallazgo","problema","desc"
+                          ),
+            sev:        ci(cInc,"severidad","prioridad","impacto","criticidad","nivel"),
+            asignado:   ci(cInc,
+                            "asignado a","responsable ti","responsable de ti",
+                            "asignado","responsable","owner","encargado"
+                          ),
+            fechaEnc:   ci(cInc,
+                            "fecha encontrado","fecha hallado","fecha deteccion","fecha detección",
+                            "fecha registro","fecha reporte","fecha enc","fecha"
+                          ),
+            fechaDiag:  ci(cInc,
+                            "fecha diagnostico","fecha diagnóstico","fecha analisis","fecha análisis",
+                            "fecha diag","f. diagnostico","f.diagnostico"
+                          ),
+            fechaSol:   ci(cInc,
+                            "fecha solucion","fecha solución","fecha cierre","fecha resolucion",
+                            "fecha resolución","fecha corrección","fecha fix","fecha sol"
+                          ),
+            estado:     ci(cInc,
+                            "estado incidencia","estado defecto","estado observacion","estado observación",
+                            "estado","status","situacion","situación"
+                          ),
+            comentarios:ci(cInc,"comentarios","comentario","notas","nota","accion","acción","obs")
+          };
+
+          console.warn("🔍 Mapeo Incidencias:", {
+            idInc:      incC.idInc     >=0?`✅ [${incC.idInc}] "${cInc[incC.idInc]}"`     :"❌ NO ENCONTRADO",
+            categoria:  incC.categoria >=0?`✅ [${incC.categoria}] "${cInc[incC.categoria]}"`:"❌ NO ENCONTRADO",
+            desc:       incC.desc      >=0?`✅ [${incC.desc}] "${cInc[incC.desc]}"`        :"❌ NO ENCONTRADO",
+            estado:     incC.estado    >=0?`✅ [${incC.estado}] "${cInc[incC.estado]}"`    :"❌ NO ENCONTRADO",
+            sev:        incC.sev       >=0?`✅ [${incC.sev}] "${cInc[incC.sev]}"`          :"❌ NO ENCONTRADO",
+            asignado:   incC.asignado  >=0?`✅ [${incC.asignado}] "${cInc[incC.asignado]}"`:"❌ NO ENCONTRADO",
+            fechaEnc:   incC.fechaEnc  >=0?`✅ [${incC.fechaEnc}] "${cInc[incC.fechaEnc]}"`:"❌ NO ENCONTRADO",
+            propuesta:  incC.propuesta >=0?`✅ [${incC.propuesta}] "${cInc[incC.propuesta]}"`:"❌ NO ENCONTRADO",
+          });
+
+          /* ── 4. Leer filas de datos ── */
+          for(let i=hRow+1; i<rawInc.length; i++){
+            const r = rawInc[i];
+            if(!r || r.every(c => c==null || c.toString().trim()=== "")) continue;
+
+            /* ID: mapeo o primera celda no vacía */
+            const idI = incC.idInc >= 0
+              ? g(r, incC.idInc)
+              : (r.find(c => c!=null && c.toString().trim()!=="") || "").toString().trim();
+
+            if(!idI) continue;
+
+            DATA_INC.push({
+              idInc:       idI,
+              idTest:      g(r, incC.idTest),
+              idFunc:      g(r, incC.idFunc),
+              propuesta:   g(r, incC.propuesta),
+              categoria:   g(r, incC.categoria),
+              desc:        g(r, incC.desc),
+              severidad:   g(r, incC.sev),
+              asignado:    g(r, incC.asignado),
+              fechaEnc:    gd(r, incC.fechaEnc),
+              fechaDiag:   gd(r, incC.fechaDiag),
+              fechaSol:    gd(r, incC.fechaSol),
+              estado:      g(r, incC.estado),
+              comentarios: g(r, incC.comentarios)
+            });
+          }
+
+          console.warn(`✅ DATA_INC: ${DATA_INC.length} registros cargados`);
+          if(DATA_INC.length > 0) console.table(DATA_INC.slice(0,3));
+          else console.error("⚠️ DATA_INC vacío — revisa el mapeo de columnas arriba");
+
+        } else {
+          console.error("❌ No se encontró hoja de Incidencias. Hojas:", wb.SheetNames);
+          showToast("⚠️ No se encontró 'Matriz de Incidencias' en el Excel","error");
         }
 
-        /* ── Finalizar ── */
-        showLoader(94,"Construyendo tablero…");
-        document.getElementById("splashEmpty").classList.add("hidden");
-        document.getElementById("mainContent").classList.remove("hidden");
-        showLoader(97,"Renderizando…");
-        _activeApp = "";
-        rebuildFilters();
-        rebuildAppFilter();    // ← ESTA LÍNEA FALTABA
-        applyFilters();
-        document.getElementById("footerSource").innerHTML=`Datos cargados desde <strong>${file.name}</strong>`;
+        hideLoader();
+        showToast("✅ Datos cargados correctamente","success");
         updateHeaderMeta();
-        showLoader(100,"¡Listo!");
-        setTimeout(hideLoader,500);
-        showToast(`✅ ${DATA_CP.length} CPs · ${DATA_EJEC.length} ejec · ${DATA_INC.length} inc`,"success");
-
-      } catch(err){ hideLoader(); showToast("❌ Error: "+err.message,"error"); console.error(err); }
-    },60);
+        buildAppFilterBtns();
+        applyFilters();
+      } catch(err) {
+        hideLoader();
+        console.error("Error al procesar archivo Excel:", err);
+        showToast("❌ Error al procesar archivo Excel: "+err.message,"error");
+      }
+    }, 50);
   };
-  reader.readAsArrayBuffer(file); input.value="";
+  reader.readAsArrayBuffer(file);
 }
 
 /* ══════════════════════════════════════════════════════
-   FILTRO DINÁMICO POR APLICACIÓN
+   GRÁFICOS BURNDOWN — Canvas puro
 ══════════════════════════════════════════════════════ */
-function rebuildAppFilter(){
-  const container = document.getElementById("appFilterBtns");
-  container.innerHTML = "";
+function renderBurnChart(){
+  const canvas = document.getElementById("burnChart");
+  const wrap   = canvas.parentElement;
+  const W = wrap.offsetWidth  || 700;
+  const H = 280;
+  canvas.width  = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  canvas.style.width  = W + "px";
+  canvas.style.height = H + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.scale(devicePixelRatio, devicePixelRatio);
 
-  /* Botón "Todas" */
-  const btnAll = document.createElement("button");
-  btnAll.className = "app-filter-btn all-btn" + (_activeApp === "" ? " active" : "");
-  btnAll.textContent = "Todas";
-  btnAll.onclick = () => { _activeApp = ""; rebuildAppFilter(); applyFilters(); };
-  container.appendChild(btnAll);
+  if(!_burnRows.length){
+    ctx.fillStyle = "#aaa"; ctx.font = "13px Segoe UI";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("Sin datos de ejecución con fecha registrada", W/2, H/2);
+    return;
+  }
 
-  /* Obtener apps únicas ordenadas */
-  const apps = [...new Set(DATA_CP.map(r => cleanStr(r.app)).filter(Boolean))].sort();
+  const ml=52, mr=72, mt=20, mb=58;
+  const pw=W-ml-mr, ph=H-mt-mb;
+  const n=_burnRows.length;
 
-  apps.forEach(app => {
-    const btn = document.createElement("button");
-    btn.className = "app-filter-btn" + (_activeApp === app ? " active" : "");
-    btn.textContent = app;
-    /* Contar funcionalidades únicas de esta app */
-    const funcs = new Set(
-      DATA_CP
-        .filter(r => cleanStr(r.app) === app && cleanStr(r.n2) !== "")
-        .map(r => { const id = cleanStr(r.idFunc); return id !== "" ? id.toLowerCase() : cleanStr(r.n2).toLowerCase(); })
-    ).size;
-    btn.title = `${funcs} funcionalidad${funcs !== 1 ? "es" : ""}`;
-    btn.onclick = () => { _activeApp = app; rebuildAppFilter(); applyFilters(); };
-    container.appendChild(btn);
-  });
+  const dataEx  = _burnRows.map(r=>r.ex);
+  const dataExO = _burnRows.map(r=>r.exObs);
+  const dataFa  = _burnRows.map(r=>r.fa);
+  const dataStk = _burnRows.map(r=>r.stock);
+
+  const maxDia    = Math.max(...dataEx, ...dataExO, ...dataFa, 1);
+  const yDiaMax   = Math.ceil(maxDia * 1.4);
+  const maxStk    = Math.max(...dataStk, 1);
+  const yStockMax = Math.ceil(maxStk * 1.1);
+
+  const midY = mt + ph / 2;
+  const xOf  = i => ml + i * (pw/n) + (pw/n) / 2;
+  const yBar = v => midY - (v / yDiaMax) * (ph/2);
+  const yStk = v => mt + ph - (v / yStockMax) * ph;
+
+  let hovIdx = -1;
+
+  function draw(){
+    ctx.clearRect(0, 0, W, H);
+
+    /* ── Fondo hover columna ── */
+    if(hovIdx >= 0){
+      ctx.fillStyle = "rgba(30,136,229,.06)";
+      const gw = pw/n;
+      ctx.fillRect(ml + hovIdx*gw, mt, gw, ph);
+    }
+
+    /* ── Grid ── */
+    ctx.setLineDash([3,3]);
+    [1,2,3,4].forEach(i=>{
+      const y=mt+(ph/4)*i;
+      ctx.strokeStyle="#eee"; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(ml,y); ctx.lineTo(ml+pw,y); ctx.stroke();
+    });
+    ctx.setLineDash([]);
+    ctx.strokeStyle="#ddd"; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(ml,midY); ctx.lineTo(ml+pw,midY); ctx.stroke();
+
+    /* ── Barras ── */
+    const groupW=pw/n, totalBW=Math.min(groupW*0.72,36), subW=totalBW/3;
+    for(let i=0;i<n;i++){
+      const bx=ml+i*groupW+groupW/2-totalBW/2;
+      const isH = i===hovIdx;
+      const alpha = (!isH && hovIdx>=0) ? "99" : "";
+
+      if(dataEx[i]>0){
+        ctx.fillStyle="#43A047"+alpha;
+        if(isH){ ctx.shadowColor="#43A04766"; ctx.shadowBlur=8; }
+        _rrect(ctx,bx,yBar(dataEx[i]),subW-1,midY-yBar(dataEx[i]),2); ctx.fill();
+        ctx.shadowBlur=0;
+      }
+      if(dataExO[i]>0){
+        ctx.fillStyle="#F9A825"+alpha;
+        _rrect(ctx,bx+subW,yBar(dataExO[i]),subW-1,midY-yBar(dataExO[i]),2); ctx.fill();
+      }
+      if(dataFa[i]>0){
+        const bot=yBar(-dataFa[i]);
+        ctx.fillStyle="#EC0000"+alpha;
+        if(isH){ ctx.shadowColor="#EC000066"; ctx.shadowBlur=8; }
+        _rrect(ctx,bx+subW*2,midY,subW-1,bot-midY,2); ctx.fill();
+        ctx.shadowBlur=0;
+      }
+    }
+
+    /* ── Stock área ── */
+    ctx.fillStyle="rgba(30,136,229,.08)";
+    ctx.beginPath(); ctx.moveTo(xOf(0),yStk(dataStk[0]));
+    for(let i=1;i<n;i++){
+      const mx=(xOf(i-1)+xOf(i))/2;
+      ctx.bezierCurveTo(mx,yStk(dataStk[i-1]),mx,yStk(dataStk[i]),xOf(i),yStk(dataStk[i]));
+    }
+    ctx.lineTo(xOf(n-1),mt+ph); ctx.lineTo(xOf(0),mt+ph); ctx.closePath(); ctx.fill();
+
+    /* ── Stock línea ── */
+    ctx.strokeStyle="#1E88E5"; ctx.lineWidth=2.5;
+    ctx.beginPath(); ctx.moveTo(xOf(0),yStk(dataStk[0]));
+    for(let i=1;i<n;i++){
+      const mx=(xOf(i-1)+xOf(i))/2;
+      ctx.bezierCurveTo(mx,yStk(dataStk[i-1]),mx,yStk(dataStk[i]),xOf(i),yStk(dataStk[i]));
+    }
+    ctx.stroke();
+
+
+
+
+    /* ── Puntos stock ── */
+    dataStk.forEach((v,i)=>{
+      const isH=i===hovIdx;
+      ctx.beginPath(); ctx.arc(xOf(i),yStk(v),isH?6:3,0,Math.PI*2);
+      ctx.fillStyle=isH?"#1E88E5":"#fff";
+      ctx.strokeStyle="#1E88E5"; ctx.lineWidth=isH?2.5:1.5;
+      ctx.fill(); ctx.stroke();
+    });
+
+    /* ── Eje Y izq ── */
+    ctx.textAlign="right"; ctx.textBaseline="middle"; ctx.font="9px Segoe UI"; ctx.fillStyle="#999";
+    const stepD=Math.max(1,Math.ceil(yDiaMax/4));
+    ctx.fillText("0",ml-6,midY);
+    for(let v=stepD;v<=yDiaMax;v+=stepD){
+      ctx.fillStyle="#43A047"; ctx.fillText(v,ml-6,yBar(v));
+      ctx.fillStyle="#EC0000"; ctx.fillText(v,ml-6,yBar(-v));
+    }
+    ctx.save(); ctx.translate(13,mt+ph/4); ctx.rotate(-Math.PI/2);
+    ctx.textAlign="center"; ctx.font="bold 8px Segoe UI"; ctx.fillStyle="#bbb";
+    ctx.fillText("CPs / día",0,0); ctx.restore();
+
+    /* ── Eje Y der ── */
+    ctx.textAlign="left"; ctx.textBaseline="middle"; ctx.font="9px Segoe UI"; ctx.fillStyle="#1E88E5";
+    const stepS=Math.max(1,Math.ceil(yStockMax/4));
+    for(let v=0;v<=yStockMax;v+=stepS) ctx.fillText(v,ml+pw+6,yStk(v));
+    ctx.save(); ctx.translate(W-11,mt+ph/2); ctx.rotate(Math.PI/2);
+    ctx.textAlign="center"; ctx.font="bold 8px Segoe UI"; ctx.fillStyle="#1E88E5";
+    ctx.fillText("Stock pendiente",0,0); ctx.restore();
+
+    /* ── Eje X ── */
+    ctx.fillStyle="#777"; ctx.font="9px Segoe UI";
+    ctx.textAlign="left"; ctx.textBaseline="top";
+    const every=Math.ceil(n/14);
+    for(let i=0;i<n;i+=every){
+      ctx.save(); ctx.translate(xOf(i),mt+ph+5); ctx.rotate(Math.PI/5);
+      ctx.fillText(_burnRows[i].key.substring(0,5),0,0); ctx.restore();
+    }
+
+    /* ── Borde ── */
+    ctx.strokeStyle="#e0e0e0"; ctx.lineWidth=1;
+    ctx.strokeRect(ml,mt,pw,ph);
+
+    /* ── Tooltip hover ── */
+    if(hovIdx >= 0){
+      const r  = _burnRows[hovIdx];
+      const tx = xOf(hovIdx);
+      const lines = [
+        { t: r.key, bold: true, color: "#222" },
+        { t: `✅ Exitosos: ${r.ex}`,           color: "#43A047" },
+        { t: `🟡 Con Obs: ${r.exObs}`,         color: "#F9A825" },
+        { t: `🔴 Fallidos: ${r.fa}`,           color: "#EC0000" },
+        { t: `📦 Stock: ${r.stock}`,            color: "#1E88E5" },
+        { t: `📊 Avance: ${r.pct}%`,            color: "#8E24AA" },
+      ];
+      const boxW=148, boxH=lines.length*17+14, boxR=7;
+      let bx = tx - boxW/2;
+      if(bx < ml) bx = ml;
+      if(bx + boxW > ml+pw) bx = ml+pw-boxW;
+      const by = midY - boxH - 12;
+
+      ctx.fillStyle="rgba(255,255,255,.97)";
+      ctx.shadowColor="rgba(0,0,0,.18)"; ctx.shadowBlur=12;
+      _rrect(ctx, bx, by, boxW, boxH, boxR); ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.strokeStyle="#e0e0e0"; ctx.lineWidth=1;
+      _rrect(ctx, bx, by, boxW, boxH, boxR); ctx.stroke();
+
+      /* Línea guía */
+      ctx.setLineDash([4,3]);
+      ctx.strokeStyle="rgba(30,136,229,.3)"; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(tx,by+boxH); ctx.lineTo(tx,mt+ph); ctx.stroke();
+      ctx.setLineDash([]);
+
+      lines.forEach((l,i)=>{
+        ctx.font      = l.bold ? "bold 10px Segoe UI" : "10px Segoe UI";
+        ctx.fillStyle = l.color;
+        ctx.textAlign = "left"; ctx.textBaseline = "top";
+        ctx.fillText(l.t, bx+10, by+8+i*17);
+      });
+    }
+  }
+
+  draw();
+
+  canvas.onmousemove = ev => {
+    const rect = canvas.getBoundingClientRect();
+    const mx   = ev.clientX - rect.left;
+    const gw   = pw / n;
+    const idx  = Math.floor((mx - ml) / gw);
+    const newH = (idx >= 0 && idx < n) ? idx : -1;
+    if(newH !== hovIdx){ hovIdx = newH; draw(); }
+    canvas.style.cursor = newH >= 0 ? "crosshair" : "default";
+  };
+  canvas.onmouseleave = () => { hovIdx = -1; draw(); canvas.style.cursor="default"; };
+}
+
+function _rrect(ctx, x, y, w, h, r){
+  r = Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y,   x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x,   y+h, r);
+  ctx.arcTo(x,   y+h, x,   y,   r);
+  ctx.arcTo(x,   y,   x+w, y,   r);
+  ctx.closePath();
 }
 
 /* ══════════════════════════════════════════════════════
-   FILTROS
+   APPLY FILTERS / FILTRO APLICACIÓN
 ══════════════════════════════════════════════════════ */
-const QA_FILTERS  = [];
-const DEF_FILTERS = [];
-const ALL_FILTERS = [];
-
-function rebuildFilters(){ /* vacío, ya no hay selects */ }
-
-function getFilteredData(){
-  return { cp: DATA_CP, ej: DATA_EJEC, inc: DATA_INC };
-}
-
 function applyFilters(){
-  const d = getFilteredData();
+  const cpFiltered = _activeApp
+    ? DATA_CP.filter(r => cleanStr(r.app).toLowerCase() === _activeApp.toLowerCase())
+    : DATA_CP;
+  const ejFiltered = _activeApp
+    ? DATA_EJEC.filter(r => cleanStr(r.app).toLowerCase() === _activeApp.toLowerCase())
+    : DATA_EJEC;
 
-  const cpFiltered = _activeApp !== ""
-    ? d.cp.filter(r => cleanStr(r.app) === _activeApp)
-    : d.cp;
+  updateMacroTable(cpFiltered, ejFiltered);
+  updateHierTable(cpFiltered, ejFiltered);
+  updateBurndown(cpFiltered, ejFiltered);
+  updateSec2(cpFiltered, ejFiltered);
+  updateSec3(DATA_INC);
 
-  /* IDs de CPs y tests filtrados */
-  const cpIds    = new Set(cpFiltered.map(r => r.idTest).filter(Boolean));
-  const funcIds  = new Set(cpFiltered.map(r => cleanStr(r.idFunc)).filter(Boolean));
+  document.getElementById("splashEmpty").classList.add("hidden");
+  document.getElementById("mainContent").classList.remove("hidden");
 
-  const ejFiltered = _activeApp !== ""
-    ? d.ej.filter(r => !r.idTest || cpIds.has(r.idTest))
-    : d.ej;
-
-  /* ── Cruzar incidencias con los ID TEST ejecutados filtrados ── */
-  const ejIds = new Set(ejFiltered.map(r => cleanStr(r.idTest).toUpperCase()).filter(Boolean));
-
-  const incFiltered = _activeApp !== ""
-    ? d.inc.filter(r => {
-        /* 1. Si la incidencia tiene idFunc → cruzar con funcIds */
-        if(r.idFunc && cleanStr(r.idFunc) !== ""){
-          return funcIds.has(cleanStr(r.idFunc));
-        }
-        /* 2. Si tiene idTest → cruzar con ejIds */
-        if(r.idTest && cleanStr(r.idTest) !== ""){
-          return ejIds.has(cleanStr(r.idTest).toUpperCase());
-        }
-        /* 3. Sin referencia → mostrar siempre (no se puede filtrar) */
-        return true;
-      })
-    : d.inc;
-
-  updateMacroTable(cpFiltered,  ejFiltered);
-  updateHierTable(cpFiltered,   ejFiltered);
-  updateBurndown(cpFiltered,    ejFiltered);
-  updateSec2(cpFiltered,        ejFiltered);
-  updateSec3(incFiltered);
+  /* ── Re-dibujar gráfico burndown DESPUÉS de mostrar el contenedor ── */
+  setTimeout(renderBurnChart, 80);
 }
 
-function resetFilters(){
-  ALL_FILTERS.forEach(id=>{ const s=document.getElementById(id); if(s) s.value=""; });
+/* ══════════════════════════════════════════════════════
+   DOM READY
+══════════════════════════════════════════════════════ */
+document.addEventListener("DOMContentLoaded", () => {
+  const el = document.getElementById("footerTs");
+  if(el) el.textContent = new Date().toLocaleString("es-PE",{
+    day:"2-digit", month:"2-digit", year:"numeric",
+    hour:"2-digit", minute:"2-digit"
+  });
+});
+
+/* ══════════════════════════════════════════════════════
+   VARIABLES PAGINACIÓN
+══════════════════════════════════════════════════════ */
+let _defRows = [], _defPage = 1;
+const DEF_PAGE_SIZE = 5;
+let _burnRows = [], _burnPage = 1;
+const BURN_PAGE_SIZE = 5;
+
+/* ══════════════════════════════════════════════════════
+   HELPERS FECHA
+══════════════════════════════════════════════════════ */
+function fmtDateStr(d){
+  return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+}
+function parseFecha(raw){
+  if(!raw) return null;
+  if(raw instanceof Date) return isNaN(raw)?null:raw;
+  const s = raw.toString().trim();
+  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){
+    const p=s.split("/"); return new Date(+p[2],+p[1]-1,+p[0]);
+  }
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(iso) return new Date(+iso[1],+iso[2]-1,+iso[3]);
+  const f = new Date(s); return isNaN(f)?null:f;
+}
+
+/* ══════════════════════════════════════════════════════
+   FILTRO APLICACIÓN
+══════════════════════════════════════════════════════ */
+function buildAppFilterBtns(){
+  const apps = [...new Set(DATA_CP.map(r => cleanStr(r.app)).filter(Boolean))].sort();
+  const container = document.getElementById("appFilterBtns");
+  container.innerHTML =
+    `<button class="app-filter-btn all-btn active" data-app="" onclick="setAppFilter('')">Todas</button>` +
+    apps.map(a =>
+      `<button class="app-filter-btn" data-app="${a}" onclick="setAppFilter('${a.replace(/'/g,"\\'")}')">${a}</button>`
+    ).join("");
+}
+
+function setAppFilter(app){
+  _activeApp = app;
+  document.querySelectorAll(".app-filter-btn").forEach(b =>
+    b.classList.toggle("active", b.dataset.app === app)
+  );
   applyFilters();
 }
 
 /* ══════════════════════════════════════════════════════
-   SECCIÓN 1 — TABLA MACROPROCESOS
+   SECCIÓN 1 — MACROPROCESOS
 ══════════════════════════════════════════════════════ */
 function updateMacroTable(cpData, ejData){
   cpData = cpData || DATA_CP;
   ejData = ejData || DATA_EJEC;
-
-  const resMap = buildResMap(ejData);  // ← usa buildResMap
-
-  const extraN0 = [...new Set(cpData.map(r => r.n0).filter(Boolean))]
-    .filter(n => !MACRO_ORDER.some(m => norm(m) === norm(n)));
-  const macroList = [...MACRO_ORDER, ...extraN0];
-
-  const tbody = document.getElementById("macroTableBody");
-  const tfoot = document.getElementById("macroTableFoot");
+  const resMap = buildResMap(ejData);
+  const tbody  = document.getElementById("macroTableBody");
+  const tfoot  = document.getElementById("macroTableFoot");
   tbody.innerHTML = ""; tfoot.innerHTML = "";
+  let totCP=0, totEx=0, totFa=0, totN1=0, totN2=0;
 
-  let totN0=new Set(), totN1=new Set(), totN2=new Set();
-  let totCP=0, totEx=0, totFa=0, totSin=0;
-  let rowIdx = 1;
-
-  macroList.forEach(macro => {
+  MACRO_ORDER.forEach((macro, idx) => {
     const rows = cpData.filter(r => r.n0 && norm(r.n0) === norm(macro));
-
-    const n0s = new Set(rows.map(r => r.n0).filter(v => v && cleanStr(v) !== ""));
-    const n1s = new Set(rows.filter(r => r.n1 && cleanStr(r.n1) !== "").map(r => cleanStr(r.n1)));
-    const n2s = new Set(rows.filter(r => r.n2 && cleanStr(r.n2) !== "").map(r => {
+    const n1s  = new Set(rows.filter(r=>cleanStr(r.n1)).map(r=>norm(r.n1))).size;
+    const n2s  = new Set(rows.map(r => {
       const id = cleanStr(r.idFunc);
-      return id !== "" ? id.toLowerCase() : cleanStr(r.n2).toLowerCase();
-    }));
-
-    const cpTests = rows.map(r => r.idTest).filter(Boolean);
-    const ex  = cpTests.filter(id => getResultado(resMap,id).toUpperCase().includes("EXITOSO")).length;
-    const fa  = cpTests.filter(id => {
-      const res = getResultado(resMap,id).toUpperCase();
-      return res.includes("FALLIDO") || res.includes("INCIDENCIA");
-    }).length;
-    const sin = cpTests.filter(id => !getResultado(resMap,id).trim()).length;
-    const total = cpTests.length;
-    const pct   = total > 0 ? Math.round(ex / total * 100) : 0;
-
-    if(_activeApp !== "" && total === 0) return;
-
-    const color    = MACRO_COLORS[macro] || "#9E9E9E";
-    const pctColor = pct>=80?"#43A047":pct>=40?"#FB8C00":"#EC0000";
-    const isEmpty  = total === 0;
-
-    n0s.forEach(v => totN0.add(v));
-    n1s.forEach(v => totN1.add(v));
-    n2s.forEach(v => totN2.add(`${norm(macro)}|||${v}`));
-    totCP  += total;
-    totEx  += ex;
-    totFa  += fa;
-    totSin += sin;
+      return id ? id.toLowerCase() : norm(r.n2);
+    }).filter(Boolean)).size;
+    const ex    = rows.filter(r => getResultado(resMap,r.idTest,r.idFunc).toUpperCase().includes("EXITOSO")).length;
+    const fa    = rows.filter(r => { const res=getResultado(resMap,r.idTest,r.idFunc).toUpperCase(); return res.includes("FALLIDO")||res.includes("INCIDENCIA"); }).length;
+    const total = rows.length;
+    const pct   = total>0 ? Math.round((ex+fa)/total*100) : 0;
+    const pctC  = pct>=80?"#43A047":pct>=40?"#FB8C00":"#EC0000";
+    const color = MACRO_COLORS[macro]||"#9E9E9E";
+    totCP+=total; totEx+=ex; totFa+=fa; totN1+=n1s; totN2+=n2s;
 
     const tr = document.createElement("tr");
-    if(isEmpty) tr.className = "macro-row-empty";
-    tr.innerHTML = `
-      <td style="text-align:center;font-weight:700;color:#999;font-size:.72rem;">${rowIdx++}</td>
-      <td><span class="macro-badge"><img src="favicon.ico" class="macro-dot" alt=""/>${macro}</span></td>
-      <td style="text-align:center;font-weight:700;color:#333;">${isEmpty?"0":n0s.size||1}</td>
-      <td style="text-align:center;font-weight:700;color:#555;">${isEmpty?"0":n1s.size}</td>
-      <td style="text-align:center;font-weight:700;color:#555;">${isEmpty?"0":n2s.size}</td>
-      <td style="text-align:center;font-weight:700;color:#1E88E5;">${isEmpty?"0":total}</td>
-      <td style="min-width:120px;">
-        <div class="macro-progress">
-          <div class="macro-progress-track">
-            <div class="macro-progress-fill" style="width:${pct}%;background:${isEmpty?"#EEE":pctColor};"></div>
-          </div>
-          <span class="macro-pct" style="color:${isEmpty?"#CCC":pctColor}">${pct}%</span>
-        </div>
-      </td>`;
+    if(!total) tr.className="macro-row-empty";
+    tr.innerHTML=``
+      +`<td style="font-size:.75rem;color:#aaa;">${idx+1}</td>`
+      +`<td><div class="macro-badge">`
+        +`<svg class="macro-dot" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="${color}"/></svg>`
+        +`<span style="font-size:.8rem;font-weight:700;color:#222;">${macro}</span>`
+      +`</div></td>`
+      +`<td style="text-align:center;font-size:.75rem;">1</td>`
+      +`<td style="text-align:center;font-size:.75rem;">${n1s||"—"}</td>`
+      +`<td style="text-align:center;font-size:.75rem;">${n2s||"—"}</td>`
+      +`<td style="text-align:center;font-size:.75rem;font-weight:700;">${total||"—"}</td>`
+      +`<td>${total?`<div class="macro-progress">`
+        +`<div class="macro-progress-track"><div class="macro-progress-fill" style="width:${pct}%;background:${pctC};"></div></div>`
+        +`<span class="macro-pct" style="color:${pctC}">${pct}%</span>`
+      +`</div>`:'<span style="color:#ccc;font-size:.72rem;">Sin casos</span>'}</td>`;
     tbody.appendChild(tr);
   });
 
-  const totPct  = totCP>0 ? Math.round(totEx/totCP*100) : 0;
+  const totPct  = totCP>0?Math.round((totEx+totFa)/totCP*100):0;
   const totPctC = totPct>=80?"#43A047":totPct>=40?"#FB8C00":"#EC0000";
-  tfoot.innerHTML = `<tr>
-    <td colspan="2" style="font-weight:700;">TOTAL</td>
-    <td style="text-align:center;font-weight:700;">${totN0.size}</td>
-    <td style="text-align:center;font-weight:700;">${totN1.size}</td>
-    <td style="text-align:center;font-weight:700;">${totN2.size}</td>
-    <td style="text-align:center;font-weight:700;color:#1E88E5;">${totCP}</td>
+  tfoot.innerHTML=`<tr>
+    <td></td><td style="font-weight:700;">TOTAL</td>
+    <td style="text-align:center;">${MACRO_ORDER.length}</td>
+    <td style="text-align:center;">${totN1}</td>
+    <td style="text-align:center;">${totN2}</td>
+    <td style="text-align:center;font-weight:700;">${totCP}</td>
     <td><div class="macro-progress">
-      <div class="macro-progress-track">
-        <div class="macro-progress-fill" style="width:${totPct}%;background:${totPctC};"></div>
-      </div>
+      <div class="macro-progress-track"><div class="macro-progress-fill" style="width:${totPct}%;background:${totPctC};"></div></div>
       <span class="macro-pct" style="color:${totPctC}">${totPct}%</span>
     </div></td>
   </tr>`;
 }
 
 /* ══════════════════════════════════════════════════════
-   SECCIÓN 1B — JERARQUÍA N0 → N1 → N2 (colapsable)
+   SECCIÓN 1B — JERARQUÍA
 ══════════════════════════════════════════════════════ */
 function updateHierTable(cpData, ejData){
-  cpData = cpData || DATA_CP;
-  ejData = ejData || DATA_EJEC;
-
-  const resMap = buildResMap(ejData);  // ← usa buildResMap
-
-  const tbody = document.getElementById("hierTableBody");
+  cpData = cpData||DATA_CP; ejData = ejData||DATA_EJEC;
+  const resMap = buildResMap(ejData);
+  const tbody  = document.getElementById("hierTableBody");
   tbody.innerHTML = "";
 
-  const tree = {};
-  MACRO_ORDER.forEach(m => { tree[m] = {}; });
-
+  const n0Map = {};
   cpData.forEach(r => {
-    const n0raw  = cleanStr(r.n0);
-    const n1     = cleanStr(r.n1) || "(Sin N1)";
-    const idF    = cleanStr(r.idFunc);
-    const n2name = cleanStr(r.n2) || "(Sin N2)";
-    const n2key  = idF !== "" ? idF : n2name;
-    const macro  = MACRO_ORDER.find(m => norm(m) === norm(n0raw)) || n0raw;
-    if(!macro) return;
-    if(!tree[macro])            tree[macro] = {};
-    if(!tree[macro][n1])        tree[macro][n1] = {};
-    if(!tree[macro][n1][n2key]) tree[macro][n1][n2key] = { name: n2name, idF, rows: [] };
-    tree[macro][n1][n2key].rows.push(r);
+    const n0k = norm(r.n0)||"(Sin N0)";
+    const n1k = norm(r.n1)||"(Sin N1)";
+    const n2k = cleanStr(r.idFunc) ? cleanStr(r.idFunc).toUpperCase() : norm(r.n2)||"(Sin N2)";
+    if(!n0Map[n0k]) n0Map[n0k]={name:cleanStr(r.n0),n1s:{}};
+    if(!n0Map[n0k].n1s[n1k]) n0Map[n0k].n1s[n1k]={name:cleanStr(r.n1),n2s:{}};
+    if(!n0Map[n0k].n1s[n1k].n2s[n2k]) n0Map[n0k].n1s[n1k].n2s[n2k]={name:cleanStr(r.n2),idF:cleanStr(r.idFunc),rows:[]};
+    n0Map[n0k].n1s[n1k].n2s[n2k].rows.push(r);
   });
 
-  MACRO_ORDER.forEach(macro => {
-    const n1Map = tree[macro];
-    if(!n1Map || !Object.keys(n1Map).length) return;
+  let n0Idx=0;
+  Object.entries(n0Map).forEach(([n0k,{name:n0Name,n1s:n1Map}])=>{
+    n0Idx++;
+    const color = MACRO_COLORS[Object.keys(MACRO_COLORS).find(k=>norm(k)===n0k)]||"#9E9E9E";
+    let n0CP=0,n0Ex=0,n0Fa=0,n0Sin=0;
+    Object.values(n1Map).forEach(({n2s})=>Object.values(n2s).forEach(({rows})=>rows.forEach(r=>{
+      const res=getResultado(resMap,r.idTest,r.idFunc).toUpperCase();
+      n0CP++; if(res.includes("EXITOSO")) n0Ex++; else if(res.includes("FALLIDO")||res.includes("INCIDENCIA")) n0Fa++; else n0Sin++;
+    })));
+    const n0Pct=n0CP>0?Math.round((n0Ex+n0Fa)/n0CP*100):0;
+    const n0PctC=n0Pct>=80?"#43A047":n0Pct>=40?"#FB8C00":"#EC0000";
+    const n0Id=`n0-${n0Idx}`;
 
-    const color    = MACRO_COLORS[macro] || "#9E9E9E";
-    const macroKey = norm(macro).replace(/\s+/g,"_");
-
-    /* ── Totales N0 ── */
-    let n0CP=0, n0Ex=0, n0Fa=0, n0Sin=0, n0Funcs=0;
-    Object.values(n1Map).forEach(n2Map => {
-      n0Funcs += Object.keys(n2Map).length;
-      Object.values(n2Map).forEach(({rows}) => {
-        rows.forEach(r => {
-          const res = getResultado(resMap, r.idTest).toUpperCase();
-          n0CP++;
-          if(res.includes("EXITOSO"))                                    n0Ex++;
-          else if(res.includes("FALLIDO")||res.includes("INCIDENCIA"))  n0Fa++;
-          else                                                            n0Sin++;
-        });
-      });
-    });
-
-    /* ── Si no hay CPs en este macro → omitir cuando hay filtro activo ── */
-    if(_activeApp !== "" && n0CP === 0) return;
-
-    const n0Pct  = n0CP > 0 ? Math.round(n0Ex/n0CP*100) : 0;
-    const n0PctC = n0Pct>=80?"#43A047":n0Pct>=40?"#FB8C00":"#EC0000";
-
-    /* ── Fila N0 (clickeable) ── */
-    const trN0 = document.createElement("tr");
-    trN0.className = "hier-n0-row";
-    trN0.dataset.key = macroKey;
-    trN0.innerHTML = `
-      <td colspan="2">
-        <span class="hier-n0-badge">
-          <img src="favicon.ico" class="hier-n0-dot" alt=""/>
-          <span class="hier-toggle closed" id="tog_n0_${macroKey}">▼</span>
-          ${macro}
-        </span>
-      </td>
-      <td style="text-align:center;color:#555;font-size:.72rem;font-weight:600;">${n0Funcs} func.</td>
-
-
-      <td style="text-align:center;color:#1E88E5;font-weight:700;">${n0CP}</td>
+    const trN0=document.createElement("tr"); trN0.className="hier-n0-row"; trN0.onclick=()=>toggleHier(n0Id);
+    trN0.innerHTML=`
+      <td colspan="3"><span class="hier-toggle closed" id="tog-${n0Id}">▼</span>
+        <span class="hier-n0-badge"><svg class="hier-n0-dot" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="${color}"/></svg>${n0Name}</span></td>
+      <td style="text-align:center;">${n0CP}</td>
       <td style="text-align:center;color:#43A047;font-weight:700;">${n0Ex}</td>
       <td style="text-align:center;color:#EC0000;font-weight:700;">${n0Fa}</td>
       <td style="text-align:center;color:#9E9E9E;">${n0Sin}</td>
-      <td>
-        <div class="macro-progress">
-          <div class="macro-progress-track">
-            <div class="macro-progress-fill" style="width:${n0Pct}%;background:${n0PctC};"></div>
-          </div>
-          <span class="macro-pct" style="color:${n0PctC}">${n0Pct}%</span>
-        </div>
-      </td>`;
-    trN0.addEventListener("click", () => {
-      const tog = document.getElementById(`tog_n0_${macroKey}`);
-      const isOpen = tog.classList.contains("open");
-      tog.classList.toggle("open",  !isOpen);
-      tog.classList.toggle("closed", isOpen);
-      tbody.querySelectorAll(`[data-n0="${macroKey}"]`).forEach(tr => {
-        tr.classList.toggle("hier-collapsed", isOpen);
-      });
-    });
+      <td><div class="macro-progress"><div class="macro-progress-track"><div class="macro-progress-fill" style="width:${n0Pct}%;background:${n0PctC};"></div></div>
+        <span class="macro-pct" style="color:${n0PctC}">${n0Pct}%</span></div></td>`;
     tbody.appendChild(trN0);
 
-    /* ── Filas N1 — por defecto colapsadas ── */
-    Object.entries(n1Map).forEach(([n1, n2Map], n1Idx) => {
-      let n1CP=0, n1Ex=0, n1Fa=0, n1Sin=0;
-      Object.values(n2Map).forEach(({rows}) => {
-        rows.forEach(r => {
-          const res = getResultado(resMap, r.idTest).toUpperCase();
-          n1CP++;
-          if(res.includes("EXITOSO"))                                    n1Ex++;
-          else if(res.includes("FALLIDO")||res.includes("INCIDENCIA"))  n1Fa++;
-          else                                                            n1Sin++;
-        });
-      });
+    let n1Idx=0;
+    Object.entries(n1Map).forEach(([n1k,{name:n1Name,n2s}])=>{
+      n1Idx++;
+      let n1CP=0,n1Ex=0,n1Fa=0,n1Sin=0;
+      Object.values(n2s).forEach(({rows})=>rows.forEach(r=>{
+        const res=getResultado(resMap,r.idTest,r.idFunc).toUpperCase();
+        n1CP++; if(res.includes("EXITOSO")) n1Ex++; else if(res.includes("FALLIDO")||res.includes("INCIDENCIA")) n1Fa++; else n1Sin++;
+      }));
+      const n1Pct=n1CP>0?Math.round((n1Ex+n1Fa)/n1CP*100):0;
+      const n1PctC=n1Pct>=80?"#43A047":n1Pct>=40?"#FB8C00":"#EC0000";
+      const n1Id=`n1-${n0Idx}-${n1Idx}`;
 
-      /* ── N1 sin CPs → omitir cuando hay filtro activo ── */
-      if(_activeApp !== "" && n1CP === 0) return;
+      const trN1=document.createElement("tr");
+      /* ── Empieza COLAPSADO ── */
+      trN1.className=`hier-n1-row hier-child-${n0Id} hier-collapsed`;
+      trN1.onclick=e=>{e.stopPropagation();toggleHier(n1Id);};
+      trN1.innerHTML=`
+        <td></td><td colspan="2"><span class="hier-toggle closed" id="tog-${n1Id}">▼</span>${n1Name}</td>
+        <td style="text-align:center;">${n1CP}</td>
+        <td style="text-align:center;color:#43A047;">${n1Ex}</td>
+        <td style="text-align:center;color:#EC0000;">${n1Fa}</td>
+        <td style="text-align:center;color:#9E9E9E;">${n1Sin}</td>
+        <td><div class="macro-progress"><div class="macro-progress-track"><div class="macro-progress-fill" style="width:${n1Pct}%;background:${n1PctC};"></div></div>
+          <span class="macro-pct" style="color:${n1PctC}">${n1Pct}%</span></div></td>`;
+      tbody.appendChild(trN1);
 
-      /* ── N2 con CPs → solo los que tengan filas ── */
-      const n2Entries = Object.entries(n2Map).filter(([, {rows}]) => rows.length > 0);
-
-      /* ── Si solo hay                                                                                                                                 1 N2 y su nombre es igual al N1 → no mostrar fila N1 separada ── */
-      const skipN1Row = n2Entries.length === 1 &&
-        norm(n2Entries[0][1].name) === norm(n1);
-
-      const n1Pct  = n1CP > 0 ? Math.round(n1Ex/n1CP*100) : 0;
-      const n1PctC = n1Pct>=80?"#43A047":n1Pct>=40?"#FB8C00":"#EC0000";
-      const n1Key  = `${macroKey}_n1_${n1Idx}`;
-
-      if(!skipN1Row){
-        const trN1 = document.createElement("tr");
-        trN1.className = "hier-n1-row hier-collapsed";   // ← colapsado por defecto
-        trN1.dataset.n0  = macroKey;
-        trN1.dataset.key = n1Key;
-        trN1.innerHTML = `
-          <td></td>
-          <td><span class="hier-toggle closed" id="tog_n1_${n1Key}">▼</span>${n1}</td>
-          <td style="text-align:center;color:#888;font-size:.7rem;">${n2Entries.length} func.</td>
-          <td style="text-align:center;color:#1E88E5;">${n1CP}</td>
-          <td style="text-align:center;color:#43A047;">${n1Ex}</td>
-          <td style="text-align:center;color:#EC0000;">${n1Fa}</td>
-          <td style="text-align:center;color:#9E9E9E;">${n1Sin}</td>
-          <td>
-            <div class="macro-progress">
-              <div class="macro-progress-track">
-                <div class="macro-progress-fill" style="width:${n1Pct}%;background:${n1PctC};"></div>
-              </div>
-              <span class="macro-pct" style="color:${n1PctC}">${n1Pct}%</span>
-            </div>
-          </td>`;
-        trN1.addEventListener("click", () => {
-          const tog = document.getElementById(`tog_n1_${n1Key}`);
-          const isOpen = tog.classList.contains("open");
-          tog.classList.toggle("open",   !isOpen);
-          tog.classList.toggle("closed",  isOpen);
-          tbody.querySelectorAll(`[data-n1="${n1Key}"]`).forEach(tr => {
-            tr.classList.toggle("hier-collapsed", isOpen);
-          });
-        });
-        tbody.appendChild(trN1);
-      }
-
-      /* ── Filas N2 — por defecto colapsadas ── */
-      n2Entries.forEach(([, {name, idF, rows}]) => {
-        const n2CP  = rows.length;
-        const n2Ex  = rows.filter(r => getResultado(resMap,r.idTest).toUpperCase().includes("EXITOSO")).length;
-        const n2Fa  = rows.filter(r => {
-          const res = getResultado(resMap,r.idTest).toUpperCase();
-          return res.includes("FALLIDO") || res.includes("INCIDENCIA");
-        }).length;
-        const n2Sin = rows.filter(r => !getResultado(resMap,r.idTest).trim()).length;
-        const n2Pct  = n2CP > 0 ? Math.round(n2Ex/n2CP*100) : 0;
-        const n2PctC = n2Pct>=80?"#43A047":n2Pct>=40?"#FB8C00":"#EC0000";
-
-        const trN2 = document.createElement("tr");
-        trN2.className = "hier-n2-row hier-collapsed";   // ← colapsado por defecto
-        trN2.dataset.n0 = macroKey;
-        trN2.dataset.n1 = n1Key;
-        trN2.innerHTML = `
-          <td></td>
-          <td></td>
-          <td>${idF?`<span style="color:#aaa;font-size:.67rem;margin-right:4px;">${idF}</span>`:""}${name}</td>
-          <td style="text-align:center;font-weight:700;color:#1E88E5;">${n2CP}</td>
-          <td style="text-align:center;font-weight:700;color:#43A047;">${n2Ex}</td>
-          <td style="text-align:center;font-weight:700;color:#EC0000;">${n2Fa}</td>
+      Object.entries(n2s).forEach(([,{name:n2Name,idF,rows}])=>{
+        const n2CP=rows.length;
+        const n2Ex=rows.filter(r=>getResultado(resMap,r.idTest,r.idFunc).toUpperCase().includes("EXITOSO")).length;
+        const n2Fa=rows.filter(r=>{const res=getResultado(resMap,r.idTest,r.idFunc).toUpperCase();return res.includes("FALLIDO")||res.includes("INCIDENCIA");}).length;
+        const n2Sin=rows.filter(r=>!getResultado(resMap,r.idTest,r.idFunc).trim()).length;
+        const n2Pct=n2CP>0?Math.round((n2Ex+n2Fa)/n2CP*100):0;
+        const n2PctC=n2Pct>=80?"#43A047":n2Pct>=40?"#FB8C00":"#EC0000";
+        const trN2=document.createElement("tr");
+        /* ── Empieza COLAPSADO ── */
+        trN2.className=`hier-n2-row hier-child-${n0Id} hier-child-${n1Id} hier-collapsed`;
+        trN2.innerHTML=`
+          <td></td><td></td>
+          <td style="font-size:.72rem;">${idF?`<span style="font-size:.65rem;color:#888;margin-right:4px;">${idF}</span>`:""} ${n2Name}</td>
+          <td style="text-align:center;">${n2CP}</td>
+          <td style="text-align:center;color:#43A047;">${n2Ex}</td>
+          <td style="text-align:center;color:#EC0000;">${n2Fa}</td>
           <td style="text-align:center;color:#9E9E9E;">${n2Sin}</td>
-          <td>
-            <div class="macro-progress">
-              <div class="macro-progress-track">
-                <div class="macro-progress-fill" style="width:${n2Pct}%;background:${n2PctC};"></div>
-              </div>
-              <span class="macro-pct" style="color:${n2PctC}">${n2Pct}%</span>
-            </div>
-          </td>`;
+          <td><div class="macro-progress"><div class="macro-progress-track"><div class="macro-progress-fill" style="width:${n2Pct}%;background:${n2PctC};"></div></div>
+            <span class="macro-pct" style="color:${n2PctC}">${n2Pct}%</span></div></td>`;
         tbody.appendChild(trN2);
       });
     });
   });
 }
 
-/* ══════════════════════════════════════════════════════
-   SECCIÓN 2 — PRUEBAS & EJECUCIÓN
-══════════════════════════════════════════════════════ */
-let _pruChart = null;
+function toggleHier(id){
+  const tog    = document.getElementById(`tog-${id}`);
+  const isOpen = tog && tog.classList.contains("open");
 
-function updateSec2(cpData, ejData){
-  cpData = cpData || DATA_CP;
-  ejData = ejData || DATA_EJEC;
-
-  const resMap = buildResMap(ejData);  // ← usa buildResMap
-
-  const funcSet = new Set(
-    cpData.filter(r => r.n2 && cleanStr(r.n2) !== "")
-      .map(r => { const id=cleanStr(r.idFunc); return id!==""?id.toLowerCase():cleanStr(r.n2).toLowerCase(); })
-  );
-  const funcConCP = new Set(
-    cpData.filter(r => r.idTest && r.n2 && cleanStr(r.n2) !== "")
-      .map(r => { const id=cleanStr(r.idFunc); return id!==""?id.toLowerCase():cleanStr(r.n2).toLowerCase(); })
-  );
-
-  const totalCPs = new Set(cpData.map(r => r.idTest).filter(Boolean)).size;
-
-  /* ── Cruzar CP con Ejecución por ID TEST ── */
-  const exitosos = cpData.filter(r =>
-    r.idTest && getResultado(resMap, r.idTest).toUpperCase().includes("EXITOSO")
-  ).length;
-
-  const fallidos = cpData.filter(r => {
-    if(!r.idTest) return false;
-    const res = getResultado(resMap, r.idTest).toUpperCase();
-    return res.includes("FALLIDO") || res.includes("INCIDENCIA");
-  }).length;
-
-  const sinEj = cpData.filter(r =>
-    r.idTest && !getResultado(resMap, r.idTest).trim()
-  ).length;
-
-  document.getElementById("pruKpiTotal").textContent     = funcSet.size;
-  document.getElementById("pruKpiFuncConCP").textContent = funcConCP.size;
-  document.getElementById("pruKpiConCP").textContent     = totalCPs;
-  document.getElementById("pruKpiSinEj").textContent     = sinEj;
-  document.getElementById("pruKpiFallido").textContent   = fallidos;
-  document.getElementById("pruKpiExitoso").textContent   = exitosos;
-}
-
-function updateSec3(incData){
-  incData = incData || DATA_INC;
-
-  const total    = incData.length;
-
-  /* ── Alta + Crítica + Bloqueante ── */
-  const alta     = incData.filter(r => {
-    const s = (r.severidad||"").toUpperCase();
-    return s.includes("ALT")  ||
-           s.includes("CRITI") ||
-           s.includes("BLOQ");
-  }).length;
-
-  const progreso  = incData.filter(r => (r.estado||"").toUpperCase().includes("PROG")).length;
-  const resueltos = incData.filter(r => {
-    const e = (r.estado||"").toUpperCase();
-    return e.includes("RESUEL") || e.includes("CERRAD") || e.includes("CLOSE");
-  }).length;
-
-  document.getElementById("defKpiTotal").textContent     = total;
-  document.getElementById("defKpiAlta").textContent      = alta;
-  document.getElementById("defKpiProgreso").textContent  = progreso;
-  document.getElementById("defKpiResueltos").textContent = resueltos;
-
-  /* ── Poblar selects de filtro ── */
-  const selEst = document.getElementById("defFiltroEstado");
-  const selSev = document.getElementById("defFiltroSev");
-  const estados    = [...new Set(incData.map(r=>r.estado).filter(Boolean))].sort();
-  const severidades= [...new Set(incData.map(r=>r.severidad).filter(Boolean))].sort();
-  selEst.innerHTML = `<option value="">— Estado —</option>` + estados.map(e=>`<option value="${e.toLowerCase()}">${e}</option>`).join("");
-  selSev.innerHTML = `<option value="">— Severidad —</option>` + severidades.map(s=>`<option value="${s.toLowerCase()}">${s}</option>`).join("");
-
-  /* ── Render tabla ── */
-  _defRows = incData;
-  _defPage = 1;
-  renderDefTable();
-  renderDefCharts(incData);   // ← AGREGAR
-}
-
-function defFiltrar(){
-  const fEst = document.getElementById("defFiltroEstado").value.toLowerCase();
-  const fSev = document.getElementById("defFiltroSev").value.toLowerCase();
-  _defRows = DATA_INC.filter(r => {
-    const okEst = !fEst || (r.estado||"").toLowerCase().includes(fEst);
-    const okSev = !fSev || (r.severidad||"").toLowerCase().includes(fSev);
-    return okEst && okSev;
-  });
-  _defPage = 1;
-  renderDefTable();
-  renderDefCharts(_defRows);  // ← AGREGAR
-}
-
-function defChangePage(dir){
-  const totalPages = Math.ceil(_defRows.length / DEF_PAGE_SIZE);
-  _defPage = Math.max(1, Math.min(_defPage + dir, totalPages));
-  renderDefTable();
-}
-
-function renderDefTable(){
-  const tbody      = document.getElementById("defTableBody");
-  const pagination = document.getElementById("defPagination");
-  tbody.innerHTML  = "";
-
-  if(_defRows.length === 0){
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px;">Sin observaciones registradas</td></tr>`;
-    pagination.style.display = "none";
-    return;
-  }
-
-  const totalPages = Math.ceil(_defRows.length / DEF_PAGE_SIZE);
-  const start      = (_defPage - 1) * DEF_PAGE_SIZE;
-  const pageRows   = _defRows.slice(start, start + DEF_PAGE_SIZE);
-
-  pageRows.forEach(r => {
-    const ec = EST_COLOR(r.estado);
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td style="font-weight:700;white-space:nowrap;color:#1E88E5;">${r.idInc}</td>
-      <td style="font-size:.7rem;">${r.propuesta||"—"}</td>
-      <td style="font-size:.7rem;">${r.categoria||"—"}</td>
-      <td style="font-size:.7rem;max-width:200px;word-break:break-word;">${r.desc||"—"}</td>
-      <td style="font-size:.7rem;white-space:nowrap;">${r.asignado||"—"}</td>
-      <td style="text-align:center;font-size:.7rem;white-space:nowrap;">${r.fechaEnc||"—"}</td>
-      <td style="text-align:center;">
-        <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:.65rem;font-weight:700;
-          background:${ec.bg};color:${ec.color};">
-          ${r.estado||"—"}
-        </span>
-      </td>
-      <td style="text-align:center;font-weight:700;color:#8E24AA;">${r.ciclos||"0"}</td>`;
-    tbody.appendChild(tr);
-  });
-
-  if(totalPages > 1){
-    pagination.style.display = "flex";
-    document.getElementById("defPageInfo").textContent = `Página ${_defPage} de ${totalPages}`;
-    document.getElementById("defPrevBtn").disabled = _defPage === 1;
-    document.getElementById("defNextBtn").disabled = _defPage === totalPages;
-  } else {
-    pagination.style.display = "none";
-  }
-}
-
-let _defChartCat  = null;
-let _defChartAsig = null;
-
-function renderDefCharts(incData){
-  incData = incData || _defRows;
-
-  const PALETA = [
-    "#1E88E5","#43A047","#EC0000","#FB8C00","#8E24AA",
-    "#00897B","#F4511E","#3949AB","#E91E63","#6D4C41"
-  ];
-
-  /* ══ GRÁFICO 1 — por Categoría (Doughnut) ══ */
-  const catMap = {};
-  incData.forEach(r => {
-    const c = cleanStr(r.categoria) || "(Sin categoría)";
-    catMap[c] = (catMap[c] || 0) + 1;
-  });
-  const catLabels = Object.keys(catMap).sort((a,b) => catMap[b] - catMap[a]);
-  const catData   = catLabels.map(l => catMap[l]);
-  const total     = catData.reduce((s,v) => s+v, 0);
-
-  if(_defChartCat){ _defChartCat.destroy(); _defChartCat = null; }
-  const ctxCat = document.getElementById("defChartCategoria").getContext("2d");
-
-  if(catLabels.length === 0){
-    ctxCat.clearRect(0,0,300,240);
-    ctxCat.fillStyle="#aaa"; ctxCat.font="13px Segoe UI"; ctxCat.textAlign="center";
-    ctxCat.fillText("Sin datos", 150, 120);
-  } else {
-    _defChartCat = new Chart(ctxCat, {
-      type: "doughnut",
-      data: {
-        labels: catLabels,
-        datasets:[{
-          data: catData,
-          backgroundColor: catLabels.map((_,i) => PALETA[i % PALETA.length]),
-          borderWidth: 2,
-          borderColor: "#fff"
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: "right",
-            labels: {
-              font:{ size:10 },
-              boxWidth: 12,
-              padding: 8,
-              /* ← Mostrar etiqueta + cantidad + % siempre visible */
-              generateLabels: chart => {
-                const ds   = chart.data.datasets[0];
-                const tot  = ds.data.reduce((s,v)=>s+v,0);
-                return chart.data.labels.map((label, i) => {
-                  const val = ds.data[i];
-                  const pct = tot > 0 ? Math.round(val / tot * 100) : 0;
-                  return {
-                    text:         `${label}: ${val} (${pct}%)`,
-                    fillStyle:    ds.backgroundColor[i],
-                    strokeStyle:  "#fff",
-                    lineWidth:    1,
-                    index:        i,
-                    hidden:       false
-                  };
-                });
-              }
-            }
-          },
-          tooltip: {
-            callbacks: {
-              label: ctx => {
-                const v   = ctx.parsed;
-                const pct = total > 0 ? Math.round(v / total * 100) : 0;
-                return ` ${ctx.label}: ${v} (${pct}%)`;
-              }
-            }
-          },
-          /* ── Plugin inline para texto en el centro del donut ── */
-          doughnutLabel: {
-            total
-          }
-        },
-        cutout: "55%"
-      },
-      plugins: [{
-        id: "doughnutLabel",
-        afterDraw(chart){
-          const { ctx, chartArea:{ top, bottom, left, right } } = chart;
-          const cx = (left + right)  / 2;
-          const cy = (top  + bottom) / 2;
-          const tot = chart.config.options.plugins.doughnutLabel.total;
-          ctx.save();
-          ctx.textAlign    = "center";
-          ctx.textBaseline = "middle";
-          ctx.font         = "bold 18px Segoe UI";
-          ctx.fillStyle    = "#333";
-          ctx.fillText(tot, cx, cy - 8);
-          ctx.font      = "11px Segoe UI";
-          ctx.fillStyle = "#888";
-          ctx.fillText("total", cx, cy + 10);
-          ctx.restore();
-        }
-      }]
-    });
-  }
-
-  /* ══ GRÁFICO 2 — por Asignado A (Barras horizontales) ══ */
-  const asigMap = {};
-  incData.forEach(r => {
-    const a = cleanStr(r.asignado) || "(Sin asignar)";
-    asigMap[a] = (asigMap[a] || 0) + 1;
-  });
-  const asigEntries = Object.entries(asigMap).sort((a,b) => b[1] - a[1]);
-  const asigLabels  = asigEntries.map(e => e[0]);
-  const asigData    = asigEntries.map(e => e[1]);
-
-  if(_defChartAsig){ _defChartAsig.destroy(); _defChartAsig = null; }
-  const ctxAsig = document.getElementById("defChartAsignado").getContext("2d");
-
-  if(asigLabels.length === 0){
-    ctxAsig.clearRect(0,0,300,240);
-    ctxAsig.fillStyle="#aaa"; ctxAsig.font="13px Segoe UI"; ctxAsig.textAlign="center";
-    ctxAsig.fillText("Sin datos", 150, 120);
-  } else {
-    _defChartAsig = new Chart(ctxAsig, {
-      type: "bar",
-      data: {
-        labels: asigLabels,
-        datasets:[{
-          label: "Observaciones",
-          data: asigData,
-          backgroundColor: asigLabels.map((_,i) => PALETA[i % PALETA.length]),
-          borderRadius: 4,
-          borderWidth: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: "y",   // ← barras horizontales
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: ctx => {
-                const v   = ctx.parsed.x;
-                const pct = total > 0 ? Math.round(v / total * 100) : 0;
-                return ` ${v} observaciones (${pct}%)`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            ticks: { stepSize:1, precision:0, font:{size:10} },
-            grid:  { color:"#eee" }
-          },
-          y: {
-            ticks: { font:{size:10} },
-            grid:  { display:false }
-          }
-        }
-      }
-    });
-  }
-}
-
-/* ══════════════════════════════════════════════════════
-   BUILD RES MAP
-══════════════════════════════════════════════════════ */
-function buildResMap(ejData){
-  const resMap  = {};
-  const dateMap = {};
-  ejData.forEach(e => {
-    const idT = cleanStr(e.idTest);
-    if(!idT) return;
-    let res = cleanStr(e.resultado);
-    const resUp = res.toUpperCase();
-    if(resUp==="CORRECTO"||resUp==="OK"||resUp==="APROBADO"||resUp==="PASSED") res="EXITOSO";
-    if(resUp==="INCORRECTO"||resUp==="KO"||resUp==="FAILED")                   res="FALLIDO";
-    const idTup = idT.toUpperCase();
-    if(resMap[idTup]){
-      const p       = (e.fecha||"").split("/");
-      const fechaNew = p.length===3 ? new Date(+p[2],+p[1]-1,+p[0]) : null;
-      const fechaOld = dateMap[idTup] || null;
-      if(fechaNew && fechaOld && fechaNew <= fechaOld) return;
+  document.querySelectorAll(`.hier-child-${id}`).forEach(r => {
+    /* Al COLAPSAR: oculta todo. Al EXPANDIR: muestra solo hijos directos */
+    if(isOpen){
+      r.classList.add("hier-collapsed");
+    } else {
+      /* Solo expande si el padre inmediato NO está colapsado */
+      const classes = [...r.classList];
+      /* Fila N2: tiene 2 hier-child-xxx. Solo mostrar si su padre N1 está abierto */
+      const parentIds = classes
+        .filter(c => c.startsWith("hier-child-") && c !== `hier-child-${id}`)
+        .map(c => c.replace("hier-child-",""));
+      const parentCollapsed = parentIds.some(pid => {
+        const ptog = document.getElementById(`tog-${pid}`);
+        return ptog && ptog.classList.contains("closed");
+      });
+      if(!parentCollapsed) r.classList.remove("hier-collapsed");
     }
-    resMap[idTup]  = res;
-    const p2       = (e.fecha||"").split("/");
-    dateMap[idTup] = p2.length===3 ? new Date(+p2[2],+p2[1]-1,+p2[0]) : null;
   });
-  return resMap;
-}
 
-function getResultado(resMap, idTest){
-  if(!idTest) return "";
-  return resMap[cleanStr(idTest).toUpperCase()] || "";
-}
-
-/* ══════════════════════════════════════════════════════
-   COLORES ESTADO / SEVERIDAD
-══════════════════════════════════════════════════════ */
-const SEV_COLOR = sev => {
-  const s = (sev||"").toUpperCase();
-  if(s.includes("ALT")||s.includes("CRITI")||s.includes("BLOQ")) return {bg:"#ffebee",color:"#C62828",border:"#ef9a9a"};
-  if(s.includes("MED"))  return {bg:"#fff3e0",color:"#E65100",border:"#ffcc80"};
-  if(s.includes("BAJ"))  return {bg:"#e8f5e9",color:"#2E7D32",border:"#a5d6a7"};
-  return {bg:"#f5f5f5",color:"#555",border:"#ddd"};
-};
-const EST_COLOR = est => {
-  const e = (est||"").toUpperCase();
-  if(e.includes("CERRAD")||e.includes("RESUEL")||e.includes("CLOSE")) return {bg:"#e8f5e9",color:"#2E7D32"};
-  if(e.includes("PROG")||e.includes("ASIGN"))                         return {bg:"#fff3e0",color:"#E65100"};
-  if(e.includes("ABIERT")||e.includes("NUEVO")||e.includes("OPEN"))  return {bg:"#ffebee",color:"#C62828"};
-  return {bg:"#f5f5f5",color:"#555"};
-};
-
-/* ══════════════════════════════════════════════════════
-   PAGINACIÓN DEFECTOS
-══════════════════════════════════════════════════════ */
-let _defRows    = [];
-let _defPage    = 1;
-const DEF_PAGE_SIZE = 5;
-
-/* ══════════════════════════════════════════════════════
-   BURNDOWN — helpers de fecha
-══════════════════════════════════════════════════════ */
-function fmtDateStr(d){
-  return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
-}
-
-function parseFecha(raw){
-  if(!raw) return null;
-  if(raw instanceof Date) return isNaN(raw) ? null : raw;
-  const s = raw.toString().trim();
-  if(s.includes("GMT") || /^[A-Z][a-z]{2}\s[A-Z][a-z]{2}/.test(s)){
-    const d = new Date(s); return isNaN(d) ? null : d;
+  if(tog){
+    tog.classList.toggle("open",  !isOpen);
+    tog.classList.toggle("closed", isOpen);
   }
-  if(/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(s)){
-    const parts = s.split("/");
-    return new Date(+parts[2], +parts[1]-1, +parts[0]);
-  }
-  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if(iso) return new Date(+iso[1], +iso[2]-1, +iso[3]);
-  const MESES = {ene:0,feb:1,mar:2,abr:3,may:4,jun:5,
-                 jul:6,ago:7,sep:8,oct:9,nov:10,dic:11,
-                 jan:0,apr:3,aug:7,dec:11};
-  const m2 = s.match(/^(\d{1,2})[-\/\s]([A-Za-z\u00C0-\u017F]{3,})(?:[-\/\s](\d{2,4}))?$/);
-  if(m2){
-    const mes = MESES[m2[2].toLowerCase().substring(0,3).normalize("NFD").replace(/[\u0300-\u036f]/g,"")];
-    if(mes !== undefined){
-      const yr = m2[3] ? (+m2[3]<100 ? 2000 + +m2[3] : +m2[3]) : new Date().getFullYear();
-      return new Date(yr, mes, +m2[1]);
-    }
-  }
-  const fallback = new Date(s);
-  return isNaN(fallback) ? null : fallback;
 }
 
 /* ══════════════════════════════════════════════════════
-   BURNDOWN DIARIO
+   BURNDOWN
 ══════════════════════════════════════════════════════ */
-let _burnChart      = null;
-let _burnRows       = [];
-let _burnPage       = 1;
-const BURN_PAGE_SIZE = 5;
-
-function burnChangePage(dir){
-  const totalPages = Math.ceil(_burnRows.length / BURN_PAGE_SIZE);
-  _burnPage = Math.max(1, Math.min(_burnPage + dir, totalPages));
-  renderBurnTable();
-}
-
 function updateBurndown(cpData, ejData){
-  cpData = cpData || DATA_CP;
-  ejData = ejData || DATA_EJEC;
+  cpData=cpData||DATA_CP; ejData=ejData||DATA_EJEC;
+  const cpIds     = new Set(cpData.map(r=>cleanStr(r.idTest).toUpperCase()).filter(Boolean));
+  const cpFuncIds = new Set(cpData.map(r=>cleanStr(r.idFunc).toUpperCase()).filter(Boolean));
+  const byDate={};
 
-  const cpIds = new Set(cpData.map(r => cleanStr(r.idTest).toUpperCase()).filter(Boolean));
-
-  const byDate = {};
-  ejData.forEach(e => {
-    const idT = cleanStr(e.idTest).toUpperCase();
-    if(!idT || !cpIds.has(idT)) return;
-    const fecha = parseFecha(e.fecha);
-    if(!fecha) return;
-    const key = fmtDateStr(fecha);
-    if(!byDate[key]) byDate[key] = { fecha, key, ex:0, fa:0 };
-    const res = cleanStr(e.resultado).toUpperCase();
-    if(res.includes("EXITOSO"))                                byDate[key].ex++;
+  ejData.forEach(e=>{
+    const idT=cleanStr(e.idTest).toUpperCase();
+    const idF=cleanStr(e.idFunc).toUpperCase();
+    if(!((idT&&cpIds.has(idT))||(idF&&cpFuncIds.has(idF)))) return;
+    const fecha=parseFecha(e.fecha||e.dia); if(!fecha) return;
+    const key=fmtDateStr(fecha);
+    if(!byDate[key]) byDate[key]={fecha,key,ex:0,exObs:0,fa:0};
+    const res=cleanStr(e.resultado).toUpperCase();
+    if(res.includes("EXITOSO CON OBS")||res.includes("EXITOSO CON OBSERV")) byDate[key].exObs++;
+    else if(res.includes("EXITOSO"))  byDate[key].ex++;
     else if(res.includes("FALLIDO")||res.includes("INCIDENCIA")) byDate[key].fa++;
   });
 
-  const totalCP = cpIds.size;
-  let acumEx = 0, acumFa = 0;
+  const totalCP=cpIds.size||cpFuncIds.size;
+  let acumEx=0,acumExObs=0,acumFa=0;
+  _burnRows=Object.values(byDate).sort((a,b)=>a.fecha-b.fecha).map(d=>{
+    acumEx+=d.ex; acumExObs+=d.exObs; acumFa+=d.fa;
+    const stock=Math.max(0,totalCP-acumEx-acumExObs-acumFa);
+    const pct=totalCP>0?Math.round((acumEx+acumExObs+acumFa)/totalCP*100):0;
+    return{key:d.key,ex:d.ex,exObs:d.exObs,fa:d.fa,entradas:d.ex+d.exObs+d.fa,salidas:d.ex+d.exObs,stock,pct};
+  });
 
-  _burnRows = Object.values(byDate)
-    .sort((a,b) => a.fecha - b.fecha)
-    .map(d => {
-      acumEx += d.ex;
-      acumFa += d.fa;
-      const stock = Math.max(0, totalCP - acumEx - acumFa);
-      const pct   = totalCP > 0 ? Math.round((acumEx + acumFa) / totalCP * 100) : 0;
-      return { key:d.key, ex:d.ex, fa:d.fa, entradas:d.ex+d.fa, salidas:d.ex, stock, pct };
-    });
+  const totEx=_burnRows.reduce((s,r)=>s+r.ex,0);
+  const totExObs=_burnRows.reduce((s,r)=>s+r.exObs,0);
+  const totFa=_burnRows.reduce((s,r)=>s+r.fa,0);
+  const stockF=_burnRows.length?_burnRows[_burnRows.length-1].stock:totalCP;
 
-  const totEx    = _burnRows.reduce((s,r) => s + r.ex,       0);
-  const totFa    = _burnRows.reduce((s,r) => s + r.fa,       0);
-  const totEnt   = _burnRows.reduce((s,r) => s + r.entradas, 0);
-  const stockF   = _burnRows.length ? _burnRows[_burnRows.length-1].stock : 0;
-  const totPct   = totEnt > 0 ? Math.round(totEx / totEnt * 100) : 0;
-  const totPctC  = totPct>=80?"#43A047":totPct>=40?"#FB8C00":"#EC0000";
-
-  /* ── KPIs rápidos ── */
-  document.getElementById("burnKpiEjec").textContent  = totEx + totFa;
+  document.getElementById("burnKpiEjec").textContent  = totEx+totExObs+totFa;
   document.getElementById("burnKpiEx").textContent    = totEx;
+  document.getElementById("burnKpiExObs").textContent = totExObs;
   document.getElementById("burnKpiFa").textContent    = totFa;
   document.getElementById("burnKpiStock").textContent = stockF;
   document.getElementById("burnKpiDias").textContent  = _burnRows.length;
 
-  /* ── Tfoot ── */
-  const tfoot = document.getElementById("burnTableFoot");
-  tfoot.innerHTML = `<tr>
+  _burnPage=1;
+  renderBurnTable();
+}
+
+function burnChangePage(dir){
+  const tot=Math.ceil(_burnRows.length/BURN_PAGE_SIZE);
+  _burnPage=Math.max(1,Math.min(_burnPage+dir,tot));
+  renderBurnTable();
+}
+
+function renderBurnTable(){
+  const tbody=document.getElementById("burnTableBody");
+  const tfoot=document.getElementById("burnTableFoot");
+  const pag  =document.getElementById("burnPagination");
+  tbody.innerHTML=""; tfoot.innerHTML="";
+
+  if(!_burnRows.length){
+    tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;color:#aaa;padding:16px;">Sin datos de ejecución con fecha registrada</td></tr>`;
+    pag.style.display="none"; return;
+  }
+
+  const totalPages=Math.ceil(_burnRows.length/BURN_PAGE_SIZE);
+  const pageRows=_burnRows.slice((_burnPage-1)*BURN_PAGE_SIZE,_burnPage*BURN_PAGE_SIZE);
+  const todayKey=fmtDateStr(new Date());
+
+  pageRows.forEach(r=>{
+    const pctC=r.pct>=80?"#43A047":r.pct>=40?"#FB8C00":"#EC0000";
+    const tr=document.createElement("tr");
+    if(r.key===todayKey) tr.className="burn-row-today";
+    tr.innerHTML=`
+      <td style="font-weight:700;white-space:nowrap;">${r.key.replace(/\//g,"-")}
+        ${r.key===todayKey?' <span style="font-size:.6rem;background:#FDD835;color:#333;padding:1px 5px;border-radius:3px;">HOY</span>':''}
+      </td>
+      <td style="text-align:center;">${r.entradas}</td>
+      <td style="text-align:center;font-weight:700;color:#43A047;">${r.ex}</td>
+      <td style="text-align:center;font-weight:700;color:#EC0000;">${r.fa}</td>
+      <td style="text-align:center;">${r.salidas}</td>
+      <td style="text-align:center;font-weight:800;color:#1E88E5;">${r.stock}</td>
+      <td><div class="macro-progress">
+        <div class="macro-progress-track"><div class="macro-progress-fill" style="width:${r.pct}%;background:${pctC};"></div></div>
+        <span class="macro-pct" style="color:${pctC}">${r.pct}%</span>
+      </div></td>`;
+    tbody.appendChild(tr);
+  });
+
+  const totEnt=_burnRows.reduce((s,r)=>s+r.entradas,0);
+  const totEx=_burnRows.reduce((s,r)=>s+r.ex,0);
+  const totFa=_burnRows.reduce((s,r)=>s+r.fa,0);
+  const stockF=_burnRows.length?_burnRows[_burnRows.length-1].stock:0;
+  const totPct=totEnt>0?Math.round((totEx+totFa)/totEnt*100):0;
+  const totPctC=totPct>=80?"#43A047":totPct>=40?"#FB8C00":"#EC0000";
+  tfoot.innerHTML=`<tr>
     <td style="font-weight:700;">TOTAL (${_burnRows.length} días)</td>
     <td style="text-align:center;font-weight:700;">${totEnt}</td>
     <td style="text-align:center;font-weight:700;color:#43A047;">${totEx}</td>
@@ -1669,206 +1525,368 @@ function updateBurndown(cpData, ejData){
     <td style="text-align:center;font-weight:700;">${totEx}</td>
     <td style="text-align:center;font-weight:800;color:#1E88E5;">${stockF}</td>
     <td><div class="macro-progress">
-      <div class="macro-progress-track">
-        <div class="macro-progress-fill" style="width:${totPct}%;background:${totPctC};"></div>
-      </div>
+      <div class="macro-progress-track"><div class="macro-progress-fill" style="width:${totPct}%;background:${totPctC};"></div></div>
       <span class="macro-pct" style="color:${totPctC}">${totPct}%</span>
     </div></td>
   </tr>`;
 
-  /* ── Render tabla paginada ── */
-  _burnPage = 1;
-  renderBurnTable();
-
-  /* ── Gráfica burndown ── */
-  renderBurnChart();
-}
-
-function renderBurnTable(){
-  const tbody = document.getElementById("burnTableBody");
-  const pag   = document.getElementById("burnPagination");
-  tbody.innerHTML = "";
-
-  if(_burnRows.length === 0){
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px;">Sin datos de ejecución</td></tr>`;
-    pag.style.display = "none";
-    return;
-  }
-
-  const totalPages = Math.ceil(_burnRows.length / BURN_PAGE_SIZE);
-  const start      = (_burnPage - 1) * BURN_PAGE_SIZE;
-  const pageRows   = _burnRows.slice(start, start + BURN_PAGE_SIZE);
-  const today      = fmtDateStr(new Date());
-
-  pageRows.forEach(r => {
-    const pctC = r.pct>=80?"#43A047":r.pct>=40?"#FB8C00":"#EC0000";
-    const tr   = document.createElement("tr");
-    if(r.key === today) tr.className = "burn-row-today";
-    tr.innerHTML = `
-      <td style="white-space:nowrap;font-weight:${r.key===today?700:400};">${r.key}${r.key===today?" ★":""}</td>
-      <td style="text-align:center;">${r.entradas}</td>
-      <td style="text-align:center;color:#43A047;font-weight:700;">${r.ex}</td>
-      <td style="text-align:center;color:#EC0000;font-weight:700;">${r.fa}</td>
-      <td style="text-align:center;">${r.salidas}</td>
-      <td style="text-align:center;font-weight:800;color:#1E88E5;">${r.stock}</td>
-      <td><div class="macro-progress">
-        <div class="macro-progress-track">
-          <div class="macro-progress-fill" style="width:${r.pct}%;background:${pctC};"></div>
-        </div>
-        <span class="macro-pct" style="color:${pctC}">${r.pct}%</span>
-      </div></td>`;
-    tbody.appendChild(tr);
-  });
-
-  if(totalPages > 1){
-    pag.style.display = "flex";
-    document.getElementById("burnPageInfo").textContent = `Página ${_burnPage} de ${totalPages}`;
-    document.getElementById("burnPrevBtn").disabled = _burnPage === 1;
-    document.getElementById("burnNextBtn").disabled = _burnPage === totalPages;
-  } else {
-    pag.style.display = "none";
-  }
-}
-
-function renderBurnChart(){
-  const labels    = _burnRows.map(r => r.key);
-  const dataEx    = _burnRows.map(r => r.ex);
-  const dataFa    = _burnRows.map(r => -r.fa);
-  const dataStock = _burnRows.map(r => r.stock);
-
-  if(_burnChart){ _burnChart.destroy(); _burnChart = null; }
-  const ctx = document.getElementById("burnChart").getContext("2d");
-
-  if(!labels.length){
-    ctx.clearRect(0,0,600,260);
-    ctx.fillStyle="#aaa"; ctxCat.font="13px Segoe UI"; ctxCat.textAlign="center";
-    ctx.fillText("Sin datos de ejecución", 300, 130);
-    return;
-  }
-
-  /* ── Máximo dinámico del eje de barras (solo CPs del día) ── */
-  const maxBarVal = Math.max(
-    ...dataEx.map(v => Math.abs(v)),
-    ...dataFa.map(v => Math.abs(v)),
-    1
-  );
-  const yBarMax =  Math.ceil(maxBarVal * 1.3);  // 30% de margen arriba
-  const yBarMin = -Math.ceil(maxBarVal * 1.3);  // espejo abajo
-
-  /* ── Máximo dinámico del eje de stock ── */
-  const maxStock = Math.max(...dataStock, 1);
-  const yStockMax = Math.ceil(maxStock * 1.1);
-
-  _burnChart = new Chart(ctx, {
-    data: {
-      labels,
-      datasets:[
-        {
-          type: "bar",
-          label: "Exitosos",
-          data: dataEx,
-          backgroundColor: "#43A047",
-          borderRadius: 3,
-          yAxisID: "yBars"
-        },
-        {
-          type: "bar",
-          label: "Incidencias",
-          data: dataFa,
-          backgroundColor: "#EC0000",
-          borderRadius: 3,
-          yAxisID: "yBars"
-        },
-        {
-          type: "line",
-          label: "Stock Pendiente",
-          data: dataStock,
-          borderColor: "#1E88E5",
-          backgroundColor: "rgba(30,136,229,.08)",
-          tension: .3,
-          fill: true,
-          pointRadius: 3,
-          borderWidth: 2,
-          yAxisID: "yStock"   // ← eje separado
-        }
-      ]
-    },
-    options:{
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode:"index", intersect:false },
-      plugins:{
-        legend:{ display: false },
-        tooltip:{
-          callbacks:{
-            label: ctx => {
-              const v = Math.abs(ctx.parsed.y);
-              return ` ${ctx.dataset.label}: ${v}`;
-            }
-          }
-        }
-      },
-      scales:{
-        x:{
-          ticks:{ font:{size:9}, maxRotation:45 },
-          grid:{ color:"#eee" }
-        },
-        yBars:{
-          type: "linear",
-          position: "left",
-          min: yBarMin,
-          max: yBarMax,
-          title:{
-            display: true,
-            text: "CPs del día",
-            font:{ size:10 }
-          },
-          ticks:{
-            font:{ size:10 },
-            stepSize: Math.max(1, Math.ceil(maxBarVal / 5)),
-            callback: v => Math.abs(v)   // mostrar siempre positivo
-          },
-          grid:{ color:"#eee" }
-        },
-        yStock:{
-          type: "linear",
-          position: "right",
-          min: 0,
-          max: yStockMax,
-          title:{
-            display: true,
-            text: "Stock acumulado",
-            font:{ size:10 }
-          },
-          ticks:{
-            font:{ size:10 },
-            stepSize: Math.max(1, Math.ceil(maxStock / 5))
-          },
-          grid:{ drawOnChartArea: false }  // no dibujar grid del eje derecho
-        }
-      }
-    }
-  });
+  if(totalPages>1){
+    pag.style.display="flex";
+    document.getElementById("burnPageInfo").textContent=`Página ${_burnPage} de ${totalPages}`;
+    document.getElementById("burnPrevBtn").disabled=_burnPage===1;
+    document.getElementById("burnNextBtn").disabled=_burnPage===totalPages;
+  } else { pag.style.display="none"; }
 }
 
 /* ══════════════════════════════════════════════════════
-   HEADER META
+   SECCIÓN 2 — EJECUCIÓN
 ══════════════════════════════════════════════════════ */
-function updateHeaderMeta(){
-  const n = new Date();
-  const ts = n.toLocaleDateString("es-PE",{day:"2-digit",month:"short",year:"numeric"})
-           + " " + n.toLocaleTimeString("es-PE",{hour:"2-digit",minute:"2-digit"});
-  document.getElementById("headerMeta").innerHTML =
-    `Última actualización: ${ts}<br>CPs: ${DATA_CP.length} · Ejec: ${DATA_EJEC.length} · Inc: ${DATA_INC.length}`;
+function updateSec2(cpData, ejData){
+  cpData=cpData||DATA_CP; ejData=ejData||DATA_EJEC;
+  const resMap=buildResMap(ejData);
+  const exitosos=cpData.filter(r=>getResultado(resMap,r.idTest,r.idFunc).toUpperCase().includes("EXITOSO")).length;
+  const fallidos=cpData.filter(r=>{const res=getResultado(resMap,r.idTest,r.idFunc).toUpperCase();return res.includes("FALLIDO")||res.includes("INCIDENCIA");}).length;
+  const sinEj   =cpData.filter(r=>!getResultado(resMap,r.idTest,r.idFunc).trim()).length;
+  const n2Unicas=new Set(cpData.map(r=>{const id=cleanStr(r.idFunc);return id?id.toLowerCase():norm(r.n2);}).filter(Boolean)).size;
+  const n2ConCP =new Set(cpData.filter(r=>r.idTest).map(r=>{const id=cleanStr(r.idFunc);return id?id.toLowerCase():norm(r.n2);}).filter(Boolean)).size;
+
+  document.getElementById("pruKpiTotal").textContent     = n2Unicas;
+  document.getElementById("pruKpiFuncConCP").textContent = n2ConCP;
+  document.getElementById("pruKpiConCP").textContent     = cpData.length;
+  document.getElementById("pruKpiSinEj").textContent     = sinEj;
+  document.getElementById("pruKpiFallido").textContent   = fallidos;
+  document.getElementById("pruKpiExitoso").textContent   = exitosos;
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("footerTs").textContent = new Date().toLocaleString("es-PE",{
-    day:"2-digit", month:"2-digit", year:"numeric",
-    hour:"2-digit", minute:"2-digit"
-  });
-});
+/* ══════════════════════════════════════════════════════
+   SECCIÓN 3 — OBSERVACIONES
+══════════════════════════════════════════════════════ */
+function updateSec3(incData){
+  incData=incData||DATA_INC;
+  document.getElementById("defKpiTotal").textContent    = incData.length;
+  document.getElementById("defKpiAlta").textContent     = incData.filter(r=>SEV_COLOR(r.severidad).color==="#C62828").length;
+  document.getElementById("defKpiProgreso").textContent = incData.filter(r=>{const e=(r.estado||"").toUpperCase();return e.includes("PROG")||e.includes("ASIGN");}).length;
+  document.getElementById("defKpiResueltos").textContent= incData.filter(r=>{const e=(r.estado||"").toUpperCase();return e.includes("CERRAD")||e.includes("RESUEL")||e.includes("CLOSE");}).length;
 
+  const selEst=document.getElementById("defFiltroEstado");
+  const selSev=document.getElementById("defFiltroSev");
+  const selCat=document.getElementById("defFiltroCat");
+  const curEst=selEst.value, curSev=selSev.value, curCat=selCat.value;
+
+  selEst.innerHTML=`<option value="">— Estado —</option>`   +[...new Set(incData.map(r=>r.estado).filter(Boolean))].sort().map(e=>`<option value="${e.toLowerCase()}">${e}</option>`).join("");
+  selSev.innerHTML=`<option value="">— Severidad —</option>`+[...new Set(incData.map(r=>r.severidad).filter(Boolean))].sort().map(s=>`<option value="${s.toLowerCase()}">${s}</option>`).join("");
+  selCat.innerHTML=`<option value="">— Categoría —</option>`+[...new Set(incData.map(r=>r.categoria).filter(Boolean))].sort().map(c=>`<option value="${c.toLowerCase()}">${c}</option>`).join("");
+  selEst.value=curEst; selSev.value=curSev; selCat.value=curCat;
+
+  _defRows=incData; _defPage=1;
+  renderDefTable();
+  renderDefCharts(_defRows);
+}
+
+function defFiltrar(){
+  const fEst=document.getElementById("defFiltroEstado").value.toLowerCase();
+  const fSev=document.getElementById("defFiltroSev").value.toLowerCase();
+  const fCat=document.getElementById("defFiltroCat").value.toLowerCase();
+  _defRows=DATA_INC.filter(r=>{
+    const okEst=!fEst||(r.estado   ||"").toLowerCase().includes(fEst);
+    const okSev=!fSev||(r.severidad||"").toLowerCase().includes(fSev);
+    const okCat=!fCat||(r.categoria||"").toLowerCase().includes(fCat);
+    return okEst&&okSev&&okCat;
+  });
+  _defPage=1; renderDefTable(); renderDefCharts(_defRows);
+}
+
+function defChangePage(dir){
+  const tot=Math.ceil(_defRows.length/DEF_PAGE_SIZE);
+  _defPage=Math.max(1,Math.min(_defPage+dir,tot));
+  renderDefTable();
+}
+
+function renderDefTable(){
+  const tbody=document.getElementById("defTableBody");
+  const pag  =document.getElementById("defPagination");
+  tbody.innerHTML="";
+  if(!_defRows.length){
+    tbody.innerHTML=`<tr><td colspan="9" style="text-align:center;color:#aaa;padding:20px;">Sin observaciones registradas</td></tr>`;
+    pag.style.display="none"; return;
+  }
+  const totalPages=Math.ceil(_defRows.length/DEF_PAGE_SIZE);
+  _defRows.slice((_defPage-1)*DEF_PAGE_SIZE,_defPage*DEF_PAGE_SIZE).forEach(r=>{
+    const ec=EST_COLOR(r.estado);
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td style="font-size:.68rem;font-weight:700;white-space:nowrap;color:#1E88E5;">${r.idInc}</td>
+      <td style="font-size:.68rem;white-space:nowrap;">${r.propuesta||"—"}</td>
+      <td style="font-size:.68rem;white-space:nowrap;">${r.categoria||"—"}</td>
+      <td style="font-size:.68rem;min-width:240px;word-break:break-word;">${r.desc||"—"}</td>
+      <td style="font-size:.68rem;white-space:nowrap;">${r.asignado||"—"}</td>
+      <td style="font-size:.68rem;text-align:center;white-space:nowrap;">${r.fechaEnc||"—"}</td>
+      <td style="font-size:.68rem;text-align:center;white-space:nowrap;">${r.fechaDiag||"—"}</td>
+      <td style="font-size:.68rem;text-align:center;white-space:nowrap;">${r.fechaSol||"—"}</td>
+      <td style="text-align:center;">
+        <span style="display:inline-block;padding:2px 6px;border-radius:10px;font-size:.62rem;font-weight:700;
+          background:${ec.bg};color:${ec.color};white-space:nowrap;">${r.estado||"—"}</span>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  if(totalPages>1){
+    pag.style.display="flex";
+    document.getElementById("defPageInfo").textContent=`Página ${_defPage} de ${totalPages}`;
+    document.getElementById("defPrevBtn").disabled=_defPage===1;
+    document.getElementById("defNextBtn").disabled=_defPage===totalPages;
+  } else { pag.style.display="none"; }
+}
+
+/* ══════════════════════════════════════════════════════
+   GRÁFICOS OBSERVACIONES — Canvas interactivo HD
+══════════════════════════════════════════════════════ */
+function renderDefCharts(incData){
+  incData = incData || _defRows;
+  const catMap={}, asigMap={};
+  incData.forEach(r=>{
+    const c = cleanStr(r.categoria) || "(Sin categoría)";
+    const a = cleanStr(r.asignado)  || "(Sin asignar)";
+    catMap[c]  = (catMap[c]  || 0) + 1;
+    asigMap[a] = (asigMap[a] || 0) + 1;
+  });
+  const catLabels = Object.keys(catMap).sort((a,b)=>catMap[b]-catMap[a]);
+  const catData   = catLabels.map(l=>catMap[l]);
+  const total     = catData.reduce((s,v)=>s+v, 0);
+  const asigE     = Object.entries(asigMap).sort((a,b)=>b[1]-a[1]);
+
+  _drawDoughnut(
+    document.getElementById("defChartCategoria"),
+    catLabels, catData, PALETA, total
+  );
+  _drawHBar(
+    document.getElementById("defChartAsignado"),
+    asigE.map(e=>e[0]), asigE.map(e=>e[1]), PALETA, total
+  );
+}
+
+/* ── Doughnut interactivo ── */
+function _drawDoughnut(canvas, labels, data, colors, total){
+  const parent = canvas.parentElement;
+  const W = parent.offsetWidth  || 400;
+  const H = parent.offsetHeight || 240;
+  canvas.width  = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  canvas.style.width  = W + "px";
+  canvas.style.height = H + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+
+  const legendX = Math.floor(W * 0.50);
+  const R  = Math.min(legendX, H) / 2 - 14;
+  const cx = Math.floor(legendX / 2);
+  const cy = H / 2;
+
+  const segments = [];
+  let angle = -Math.PI / 2;
+  data.forEach((v, i) => {
+    const sweep = total > 0 ? (v / total) * Math.PI * 2 : 0;
+    segments.push({ start: angle, sweep, v, i, label: labels[i] });
+    angle += sweep;
+  });
+
+  let hovered = -1;
+
+  function draw(){
+    ctx.clearRect(0, 0, W, H);
+    if(!total){
+      ctx.fillStyle="#aaa"; ctx.font="13px Segoe UI";
+      ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText("Sin datos", W/2, H/2); return;
+    }
+
+    segments.forEach((seg, i) => {
+      const isH = i === hovered;
+      const r   = isH ? R + 8 : R;
+      const ox  = isH ? Math.cos(seg.start + seg.sweep/2) * 6 : 0;
+      const oy  = isH ? Math.sin(seg.start + seg.sweep/2) * 6 : 0;
+      ctx.shadowColor = isH ? colors[i % colors.length] + "66" : "transparent";
+      ctx.shadowBlur  = isH ? 14 : 0;
+      ctx.beginPath();
+      ctx.moveTo(cx+ox, cy+oy);
+      ctx.arc(cx+ox, cy+oy, r, seg.start, seg.start+seg.sweep);
+      ctx.closePath();
+      ctx.fillStyle = isH ? colors[i%colors.length] : colors[i%colors.length]+"DD";
+      ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.strokeStyle = "#fff"; ctx.lineWidth = isH ? 3 : 2;
+      ctx.stroke();
+    });
+
+    /* Hueco */
+    ctx.beginPath(); ctx.arc(cx, cy, R*0.54, 0, Math.PI*2);
+    ctx.fillStyle="#fff"; ctx.shadowBlur=0; ctx.fill();
+
+    /* Centro */
+    ctx.textAlign="center"; ctx.textBaseline="middle";
+    if(hovered >= 0){
+      const seg = segments[hovered];
+      const pct = Math.round(seg.v/total*100);
+      ctx.font=`bold ${Math.max(15,Math.floor(R*.36))}px Segoe UI`;
+      ctx.fillStyle=colors[hovered%colors.length];
+      ctx.fillText(seg.v, cx, cy-8);
+      ctx.font=`${Math.max(9,Math.floor(R*.19))}px Segoe UI`;
+      ctx.fillStyle="#888"; ctx.fillText(pct+"%", cx, cy+10);
+    } else {
+      ctx.font=`bold ${Math.max(15,Math.floor(R*.36))}px Segoe UI`;
+      ctx.fillStyle="#333"; ctx.fillText(total, cx, cy-8);
+      ctx.font=`${Math.max(9,Math.floor(R*.19))}px Segoe UI`;
+      ctx.fillStyle="#888"; ctx.fillText("total", cx, cy+10);
+    }
+
+    /* Leyenda */
+    const lx    = legendX + 10;
+    const lineH = Math.min(24, (H-20) / Math.max(labels.length,1));
+    ctx.textAlign="left"; ctx.textBaseline="middle";
+    labels.forEach((_, i) => {
+      const ly  = 14 + i*lineH;
+      if(ly > H-4) return;
+      const isH = i === hovered;
+      const pct = Math.round(data[i]/total*100);
+      if(isH){
+        ctx.fillStyle = colors[i%colors.length]+"18";
+        ctx.fillRect(lx-4, ly-lineH/2+1, W-lx-4, lineH-2);
+      }
+      ctx.fillStyle = colors[i%colors.length];
+      ctx.fillRect(lx, ly-4, 10, 10);
+      ctx.font=`${isH?"bold ":""}${Math.max(8,Math.min(11,lineH-4))}px Segoe UI`;
+      ctx.fillStyle = isH ? "#111" : "#444";
+      let text = `${labels[i]}: ${data[i]} (${pct}%)`;
+      const maxW = Math.floor((W-lx-20)/(isH?6.5:6.2));
+      if(text.length > maxW) text = text.substring(0, maxW-1)+"…";
+      ctx.fillText(text, lx+15, ly);
+    });
+  }
+
+  draw();
+
+  canvas.onmousemove = ev => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = ev.clientX - rect.left;
+    const my = ev.clientY - rect.top;
+    const dx = mx-cx, dy = my-cy;
+    const dist = Math.sqrt(dx*dx+dy*dy);
+    let newHov = -1;
+
+    if(dist > R*0.54 && dist < R+12){
+      let a = Math.atan2(dy, dx);
+      if(a < -Math.PI/2) a += Math.PI*2;
+      segments.forEach((seg, i) => {
+        let s = seg.start < -Math.PI/2 ? seg.start+Math.PI*2 : seg.start;
+        if(a >= s && a < s+seg.sweep) newHov = i;
+      });
+    }
+    const lineH = Math.min(24, (H-20)/Math.max(labels.length,1));
+    labels.forEach((_,i) => {
+      const ly = 14+i*lineH;
+      if(mx >= legendX+6 && mx <= W-4 && my >= ly-lineH/2 && my <= ly+lineH/2) newHov = i;
+    });
+    if(newHov !== hovered){ hovered=newHov; draw(); }
+    canvas.style.cursor = newHov >= 0 ? "pointer" : "default";
+  };
+  canvas.onmouseleave = () => { hovered=-1; draw(); canvas.style.cursor="default"; };
+}
+
+/* ── Barras horizontales interactivas ── */
+function _drawHBar(canvas, labels, data, colors, totalObs){
+  const parent = canvas.parentElement;
+  const W = parent.offsetWidth  || 400;
+  const H = parent.offsetHeight || 240;
+  canvas.width  = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  canvas.style.width  = W+"px";
+  canvas.style.height = H+"px";
+  const ctx = canvas.getContext("2d");
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+
+  const ml=Math.min(130,Math.floor(W*.35)), mr=60, mt=10, mb=18;
+  const pw=W-ml-mr, ph=H-mt-mb;
+  const maxVal = Math.max(...data, 1);
+  const n      = labels.length;
+  const rowH   = ph/n;
+  const barH   = Math.min(rowH*.52, 22);
+  let hovered  = -1;
+
+  function draw(){
+    ctx.clearRect(0, 0, W, H);
+    if(!labels.length){
+      ctx.fillStyle="#aaa"; ctx.font="13px Segoe UI";
+      ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText("Sin datos", W/2, H/2); return;
+    }
+
+    /* Grid */
+    for(let i=1; i<=4; i++){
+      const x=ml+(pw/4)*i;
+      ctx.strokeStyle="#f0f0f0"; ctx.lineWidth=1;
+      ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(x,mt); ctx.lineTo(x,mt+ph); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font="8px Segoe UI"; ctx.textAlign="center";
+      ctx.textBaseline="top"; ctx.fillStyle="#ccc";
+      ctx.fillText(Math.round(maxVal/4*i), x, mt+ph+3);
+    }
+    ctx.strokeStyle="#e0e0e0"; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(ml,mt); ctx.lineTo(ml,mt+ph); ctx.stroke();
+
+    labels.forEach((label, i) => {
+      const cy   = mt+i*rowH+rowH/2;
+      const barW = (data[i]/maxVal)*pw;
+      const pct  = totalObs>0 ? Math.round(data[i]/totalObs*100) : 0;
+      const isH  = i===hovered;
+      const col  = colors[i%colors.length];
+
+      if(isH){
+        ctx.fillStyle=col+"12";
+        ctx.fillRect(0, cy-rowH/2, W, rowH);
+      }
+
+      /* Track */
+      ctx.fillStyle = isH ? col+"22" : "#f5f5f5";
+      ctx.fillRect(ml, cy-barH/2, pw, barH);
+
+      /* Barra */
+      ctx.shadowColor = isH ? col+"55" : "transparent";
+      ctx.shadowBlur  = isH ? 8 : 0;
+      ctx.fillStyle   = isH ? col : col+"CC";
+      _rrect(ctx, ml, cy-barH/2, Math.max(barW,3), barH, 3);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      /* Etiqueta izq */
+      ctx.textAlign="right"; ctx.textBaseline="middle";
+      ctx.font=`${isH?"bold ":""}10px Segoe UI`;
+      ctx.fillStyle = isH ? "#111" : "#555";
+      let lbl = label.length>17 ? label.substring(0,15)+"…" : label;
+      ctx.fillText(lbl, ml-7, cy);
+
+      /* Valor der */
+      ctx.textAlign="left"; ctx.textBaseline="middle";
+      ctx.font=`bold ${isH?10:9}px Segoe UI`;
+      ctx.fillStyle = isH ? col : "#444";
+      ctx.fillText(`${data[i]} (${pct}%)`, ml+barW+6, cy);
+    });
+  }
+
+  draw();
+
+  canvas.onmousemove = ev => {
+    const rect = canvas.getBoundingClientRect();
+    const my   = ev.clientY - rect.top;
+    let newHov = -1;
+    labels.forEach((_,i)=>{
+      const cy = mt+i*rowH+rowH/2;
+      if(my >= cy-rowH/2 && my <= cy+rowH/2) newHov=i;
+    });
+    if(newHov !== hovered){ hovered=newHov; draw(); }
+    canvas.style.cursor = newHov>=0 ? "pointer" : "default";
+  };
+  canvas.onmouseleave = () => { hovered=-1; draw(); canvas.style.cursor="default"; };
+}
 </script>
 </body>
 </html>
